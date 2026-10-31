@@ -1,0 +1,19 @@
+#!/bin/bash
+# Relecto launcher: ./relecto serve | check FILE | gate | db-upgrade | validate-content | test
+set -e
+cd "$(dirname "$0")"
+if [ ! -x .venv/bin/python ]; then
+  echo "Première installation (une seule fois)…"
+  python3 -m venv .venv
+fi
+REQ_HASH=$(shasum requirements.txt 2>/dev/null | cut -d' ' -f1 || sha1sum requirements.txt | cut -d' ' -f1)
+if [ "$(cat .venv/.req-hash 2>/dev/null)" != "$REQ_HASH" ]; then
+  .venv/bin/pip install -q --upgrade pip
+  .venv/bin/pip install -q -r requirements.txt
+  echo "$REQ_HASH" > .venv/.req-hash
+fi
+export PYTHONPATH="$PWD/backend"
+if [ "$1" = "test" ]; then
+  cd backend && exec ../.venv/bin/python -m unittest discover -s tests -t .
+fi
+exec .venv/bin/python -m relecto "$@"

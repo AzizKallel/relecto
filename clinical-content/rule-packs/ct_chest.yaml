@@ -1,0 +1,39 @@
+# Pack de règles : Scanner thoracique.
+# Une règle ne s'exécute que si elle est listée ici avec enabled: true.
+# severity : critical (peut changer la prise en charge), warning, info.
+# Changez « version » à chaque modification ; elle est enregistrée sur chaque compte rendu.
+exam: ct_chest
+label: "Scanner thoracique (CT chest)"
+version: "1.4"
+modality: CT
+
+required_sections: [indication, technique, resultats, conclusion]
+
+technique:
+  # Au moins un de ces termes doit apparaître dans la section Technique.
+  any_of: ['injection', 'produit de contraste', 'iode', 'sans injection', 'avec injection']
+  message: "La technique ne précise pas si le scanner a été réalisé avec ou sans injection."
+
+rules:
+  SEC-001:  {enabled: true, severity: warning}
+  TECH-001: {enabled: true, severity: warning}
+  LAT-001:  {enabled: true, severity: critical}
+  ANAT-001: {enabled: true, severity: critical}
+  NEG-001:  {enabled: true, severity: critical}
+  MEAS-001: {enabled: true, severity: warning}
+  MEAS-002: {enabled: true, severity: warning}
+  TERM-001: {enabled: true, severity: info}
+  CONC-001: {enabled: true, severity: warning}
+  CONC-002: {enabled: true, severity: critical}
+  CONC-003: {enabled: true, severity: info}
+  MOD-001:
+    enabled: true
+    severity: warning
+    # Vocabulaire IRM qui ne devrait pas apparaître dans un compte rendu de scanner.
+    forbidden: ['hypersignal', 'hypersignaux', 'hyposignal', 'hyposignaux', 'isosignal',
+                'flair', 'sequences?', 'gadolinium', 'ponderation t[12]']
+    # Phrases ignorées : une recommandation d'IRM n'est pas une erreur.
+    ignore_sentences_with: ['\birm\b', 'complement', 'a completer', 'propose']
+    message: "Vocabulaire d'IRM dans un compte rendu de scanner : vérifiez le texte (modèle copié ou erreur de dictée ?)."
+  LLM-COH:  {enabled: true, severity: warning}
+  LLM-DICT: {enabled: true, severity: warning}

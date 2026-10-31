@@ -1,0 +1,46 @@
+{
+  "ANAT-001": {
+    "precision": 1.0,
+    "recall": 1.0
+  },
+  "CONC-001": {
+    "precision": 1.0,
+    "recall": 1.0
+  },
+  "CONC-002": {
+    "precision": 1.0,
+    "recall": 1.0
+  },
+  "LAT-001": {
+    "precision": 1.0,
+    "recall": 1.0
+  },
+  "MEAS-001": {
+    "precision": 1.0,
+    "recall": 1.0
+  },
+  "MEAS-002": {
+    "precision": 1.0,
+    "recall": 1.0
+  },
+  "MOD-001": {
+    "precision": 1.0,
+    "recall": 1.0
+  },
+  "NEG-001": {
+    "precision": 1.0,
+    "recall": 1.0
+  },
+  "SEC-001": {
+    "precision": 1.0,
+    "recall": 1.0
+  },
+  "TECH-001": {
+    "precision": 1.0,
+    "recall": 1.0
+  },
+  "TERM-001": {
+    "precision": 1.0,
+    "recall": 1.0
+  }
+}

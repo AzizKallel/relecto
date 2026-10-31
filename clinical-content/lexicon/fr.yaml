@@ -1,0 +1,88 @@
+# Vocabulaire médical utilisé par le vérificateur Relecto (français).
+#
+# QUI MODIFIE : le responsable clinique (radiologue). Chaque modification est
+# relue par un second radiologue puis testée automatiquement sur le jeu de
+# référence (golden set) avant d'être mise en production.
+#
+# RÈGLE D'ÉCRITURE DES FORMES : les textes sont comparés SANS accents et en
+# minuscules. Écrivez donc « epanchement » et non « Épanchement ».
+#   s?      = la lettre s est facultative (pluriel)
+#   (?:a|b) = a ou b
+#   (?:micro)?nodules? = nodule, nodules, micronodule, micronodules
+#
+# Changez « version » à chaque modification (ex. 1.0 -> 1.1).
+version: "1.0"
+
+findings:
+  # key: identifiant technique (ne pas changer une fois en production)
+  # label: nom affiché dans les messages
+  # gender: m ou f (pour corriger « droit » / « droite »)
+  # requires_size: true = une mesure est attendue quand le résultat est affirmé
+  # significant: true = doit être repris dans la conclusion
+  - {key: nodule, label: nodule, gender: m, requires_size: true, significant: true,
+     forms: ['(?:micro)?nodules?']}
+  - {key: masse, label: masse, gender: f, requires_size: true, significant: true,
+     forms: ['masses?', 'formations? tissulaires?', 'processus expansifs?']}
+  - {key: adenopathie, label: adénopathie, gender: f, requires_size: true, significant: true,
+     forms: ['adenopathies?']}
+  - {key: epanchement_pleural, label: épanchement pleural, gender: m, requires_size: false, significant: true,
+     forms: ['epanchements? pleura(?:l|ux)', 'pleuresies?']}
+  - {key: epanchement_pericardique, label: épanchement péricardique, gender: m, requires_size: false, significant: true,
+     forms: ['epanchements? pericardiques?']}
+  - {key: pneumothorax, label: pneumothorax, gender: m, requires_size: false, significant: true,
+     forms: ['pneumothorax']}
+  - {key: condensation, label: condensation, gender: f, requires_size: false, significant: true,
+     forms: ['(?:foyers? de )?condensations?(?: alveolaires?)?', 'pneumopathies?']}
+  - {key: embolie, label: embolie pulmonaire, gender: f, requires_size: false, significant: true,
+     forms: ['embolies? pulmonaires?', 'thrombus endoluminal']}
+  - {key: fracture, label: fracture, gender: f, requires_size: false, significant: true,
+     forms: ['fractures?']}
+  - {key: hemorragie, label: hémorragie, gender: f, requires_size: false, significant: true,
+     forms: ['hemorragies?', 'saignements? actifs?']}
+  - {key: hematome, label: hématome, gender: m, requires_size: true, significant: true,
+     forms: ['hematomes?']}
+  - {key: ischemie, label: ischémie, gender: f, requires_size: false, significant: true,
+     forms: ['ischemies?', 'infarctus', 'avc ischemiques?', 'lesions? ischemiques?']}
+  - {key: hernie_discale, label: hernie discale, gender: f, requires_size: false, significant: true,
+     forms: ['hernies? discales?', 'protrusions? discales?']}
+  - {key: stenose, label: sténose, gender: f, requires_size: false, significant: true,
+     forms: ['stenoses?']}
+  - {key: thrombose, label: thrombose, gender: f, requires_size: false, significant: true,
+     forms: ['thromboses?']}
+  - {key: kyste, label: kyste, gender: m, requires_size: true, significant: false,
+     forms: ['kystes?']}
+  - {key: emphyseme, label: emphysème, gender: m, requires_size: false, significant: false,
+     forms: ['emphysemes?']}
+  - {key: atelectasie, label: atélectasie, gender: f, requires_size: false, significant: false,
+     forms: ['atelectasies?', 'troubles? ventilatoires?']}
+  - {key: hypersignal, label: hypersignal, gender: m, requires_size: false, significant: false,
+     forms: ['hypersignaux', 'hypersignal']}
+
+sides:
+  # L'ordre compte : les formes longues d'abord.
+  bilateral: ['bilaterale?s?', 'des deux cotes', 'droite? et gauche', 'gauche et droite?']
+  right: ['droites?', 'droits?']
+  left: ['gauches?']
+
+negation:
+  # Mots qui nient un résultat quand ils sont AVANT lui dans la même proposition.
+  before:
+    - '\bpas d[e'']\s*'
+    - '\bpas de\b'
+    - '\babsence d[e'']\s*'
+    - '\bsans\b'
+    - '\baucun(?:e)?\b'
+    - '\bni\b'
+    - '\bnon\b'
+    - '\bne (?:met|montre|retrouve) pas\b'
+    - '\bil n''(?:y a|existe) pas\b'
+  # Mots qui nient un résultat quand ils sont APRÈS lui (« ... non retrouvé »).
+  after:
+    - '\bnon (?:retrouve|visible|identifie|decele|individualise)e?s?\b'
+    - '\babsente?s?\b'
+    - '\bn''est pas (?:retrouve|visible|identifie)e?\b'
+
+implied_side:
+  # Structures qui n'existent que d'un côté.
+  - {anatomy: 'lobe moyen', side: right, message: "Le lobe moyen n'existe qu'à droite."}
+  - {anatomy: 'lingula(?:ire)?', side: left, message: "La lingula n'existe qu'à gauche."}

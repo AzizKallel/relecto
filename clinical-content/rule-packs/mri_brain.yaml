@@ -1,0 +1,33 @@
+# Pack de règles : IRM cérébrale.
+exam: mri_brain
+label: "IRM cérébrale (MRI brain)"
+version: "1.1"
+modality: MR
+
+required_sections: [indication, technique, resultats, conclusion]
+
+technique:
+  any_of: ['\bt1\b', '\bt2\b', 'flair', 'diffusion', '\bswi\b', 't2\*', 'gadolinium', 'injection']
+  message: "La technique ne liste pas les séquences réalisées (T1, T2, FLAIR, diffusion…)."
+
+rules:
+  SEC-001:  {enabled: true, severity: warning}
+  TECH-001: {enabled: true, severity: warning}
+  LAT-001:  {enabled: true, severity: critical}
+  ANAT-001: {enabled: false, severity: critical}
+  NEG-001:  {enabled: true, severity: critical}
+  MEAS-001: {enabled: true, severity: warning}
+  MEAS-002: {enabled: true, severity: warning}
+  TERM-001: {enabled: false, severity: info}
+  CONC-001: {enabled: true, severity: warning}
+  CONC-002: {enabled: true, severity: critical}
+  CONC-003: {enabled: true, severity: info}
+  MOD-001:
+    enabled: true
+    severity: warning
+    # Vocabulaire de scanner qui ne devrait pas apparaître dans un compte rendu d'IRM.
+    forbidden: ['hypodenses?', 'hyperdenses?', 'isodenses?', 'unites? hounsfield', '\buh\b', 'densite spontanee']
+    ignore_sentences_with: ['\bscanner\b', '\btdm\b', 'comparaison', 'complement']
+    message: "Vocabulaire de scanner dans un compte rendu d'IRM : vérifiez le texte (modèle copié ou erreur de dictée ?)."
+  LLM-COH:  {enabled: true, severity: warning}
+  LLM-DICT: {enabled: true, severity: warning}

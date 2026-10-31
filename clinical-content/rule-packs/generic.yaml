@@ -1,0 +1,18 @@
+# Pack de règles par défaut pour les examens qui n'ont pas encore de pack dédié.
+exam: generic
+label: "Autre examen"
+version: "1.0"
+modality: OT
+
+required_sections: [resultats, conclusion]
+
+rules:
+  SEC-001:  {enabled: true, severity: warning}
+  LAT-001:  {enabled: true, severity: critical}
+  NEG-001:  {enabled: true, severity: critical}
+  MEAS-002: {enabled: true, severity: warning}
+  CONC-001: {enabled: true, severity: warning}
+  CONC-002: {enabled: true, severity: critical}
+  CONC-003: {enabled: true, severity: info}
+  LLM-COH:  {enabled: true, severity: warning}
+  LLM-DICT: {enabled: true, severity: warning}

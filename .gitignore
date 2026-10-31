@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+
+# macOS
+.DS_Store
+
+# Secrets
+deploy/.env
+*.env
+!deploy/.env.example
+
+# NEVER commit patient data. Real (even de-identified) reports, databases and images stay here:
+data/private/
+*.db
+*.dcm
+audit_log*.jsonl

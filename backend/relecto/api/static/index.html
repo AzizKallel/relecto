@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relecto · Vérification du compte rendu</title>
+<style>
+:root{--ink:#0F1B2D;--muted:#5B6675;--line:#E3E6EB;--bg:#F4F6F8;--accent:#0B6E6E;--accent-soft:#E6F2F2;
+--crit:#B42318;--crit-bg:#FDECEA;--warn:#93370D;--warn-bg:#FEF0C7;--info:#1D4ED8;--info-bg:#E8EEFD;--ok:#1E5E2A;--ok-bg:#E3F4E6}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+header{background:#fff;border-bottom:1px solid var(--line);padding:12px 24px;display:flex;flex-wrap:wrap;align-items:center;gap:12px 24px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px}
+.logo span{width:32px;height:32px;border-radius:8px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:var(--ok-bg);color:var(--ok);font-size:12px;font-weight:500}
+.toolbar{padding:20px 24px 0;display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end}
+label.f{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:600;color:#4A5565;text-transform:uppercase;letter-spacing:.04em}
+select{height:44px;min-width:240px;padding:0 12px;border:1px solid #CBD2DA;border-radius:8px;background:#fff;font:inherit;color:var(--ink);text-transform:none;letter-spacing:0;font-weight:400}
+button{font:inherit;cursor:pointer;min-height:44px;padding:0 16px;border-radius:8px;border:1px solid #CBD2DA;background:#fff;color:var(--ink);font-weight:500}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+button.link{border:none;background:none;color:var(--accent);font-weight:600;padding:0 8px}
+button:disabled{opacity:.5;cursor:default}
+.spacer{flex:1}
+main{padding:20px 24px 32px;display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px}
+#left{flex:999 1 560px;min-width:0;padding:24px 28px;display:flex;flex-direction:column;gap:14px}
+#left h1{margin:0;font-size:18px}
+textarea{width:100%;min-height:520px;resize:vertical;border:1px solid #CBD2DA;border-radius:8px;padding:14px;font:14px/1.7 "IBM Plex Mono",ui-monospace,Menlo,monospace;color:var(--ink)}
+#view{white-space:pre-wrap;font:14px/1.9 "IBM Plex Mono",ui-monospace,Menlo,monospace;min-height:520px}
+mark{color:inherit;border-radius:3px;padding:1px 2px}
+mark.critical{background:var(--crit-bg)}mark.warning{background:var(--warn-bg)}mark.info{background:var(--info-bg)}
+mark sup{font:700 10px Inter,system-ui,sans-serif;margin-left:2px}
+mark.critical sup{color:var(--crit)}mark.warning sup{color:var(--warn)}mark.info sup{color:var(--info)}
+.ph{background:#EEF0F3;border-radius:3px;padding:0 2px;color:#4A5565}
+.note{margin:0;font-size:12px;color:var(--muted)}
+#right{flex:1 1 380px;min-width:0;display:flex;flex-direction:column;gap:12px}
+.summary{padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.summary h2{margin:0;font-size:16px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{padding:4px 10px;border-radius:999px;font-size:12px;font-weight:600}
+.chip.critical{background:var(--crit-bg);color:var(--crit)}.chip.warning{background:var(--warn-bg);color:var(--warn)}.chip.info{background:var(--info-bg);color:var(--info)}.chip.ok{background:var(--ok-bg);color:var(--ok)}
+.issue{padding:16px 18px;display:flex;flex-direction:column;gap:9px}
+.issue.done{opacity:.7}
+.ihead{display:flex;align-items:center;gap:8px}
+.badge{padding:3px 8px;border-radius:6px;font-size:12px;font-weight:700}
+.badge.critical{background:var(--crit-bg);color:var(--crit)}.badge.warning{background:var(--warn-bg);color:var(--warn)}.badge.info{background:var(--info-bg);color:var(--info)}
+.kind{font-size:12px;color:var(--muted);font-weight:500}
+.num{margin-left:auto;width:22px;height:22px;border-radius:999px;background:#F1F3F6;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.title{margin:0;font-weight:600}
+.ev{background:#F6F7F9;border-radius:8px;padding:8px 10px;font:12.5px/1.6 "IBM Plex Mono",ui-monospace,Menlo,monospace;color:#344054}
+.msg{margin:0;font-size:13px;color:#344054}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.decided{display:flex;align-items:center;justify-content:space-between;font-weight:600;color:var(--ok);font-size:13px}
+.empty{padding:28px 18px;text-align:center;color:var(--muted)}
+#err{color:var(--crit);font-size:13px}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><span>R</span>Relecto</div>
+  <div class="spacer"></div>
+  <span class="pill">Données patient masquées avant analyse</span>
+</header>
+
+<div class="toolbar">
+  <label class="f" for="exam">Type d'examen<select id="exam"></select></label>
+  <div class="spacer"></div>
+  <button id="edit" hidden>Modifier le texte</button>
+  <button id="copy" hidden>Copier le compte rendu</button>
+  <button id="check" class="primary">Vérifier</button>
+</div>
+
+<main>
+  <section id="left" class="card" aria-label="Compte rendu">
+    <h1 id="ltitle">Collez le compte rendu</h1>
+    <textarea id="input" aria-label="Texte du compte rendu" placeholder="INDICATION : …&#10;TECHNIQUE : …&#10;RÉSULTATS : …&#10;CONCLUSION : …"></textarea>
+    <div id="view" hidden></div>
+    <p id="err" role="alert"></p>
+    <p class="note">Contrôle documentaire uniquement. Relecto n'analyse pas les images et n'ajoute jamais de résultat, de mesure ou de diagnostic. Le radiologue reste responsable du compte rendu signé.</p>
+  </section>
+
+  <aside id="right" aria-label="Points à vérifier">
+    <div class="card summary">
+      <h2>Points à vérifier</h2>
+      <div class="chips" id="chips"><span class="chip info">Collez un compte rendu puis cliquez sur Vérifier</span></div>
+      <div class="note" id="meta"></div>
+    </div>
+    <div id="issues"></div>
+  </aside>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+const SEV = {critical: "Critique", warning: "Attention", info: "Info"};
+let state = {text: "", issues: [], decisions: {}, exam: "ct_chest", reportId: null, checkId: null};
+
+const SAMPLE = `INDICATION : Toux chronique chez un ancien fumeur. Patient : BEN SALAH Mohamed, né le 12/03/1968.
+TECHNIQUE : Acquisition hélicoïdale thoracique sans injection de produit de contraste.
+RÉSULTATS :
+Nodule pulmonaire solide du lobe supérieur droit, à contours réguliers.
+Pas d'épanchement pleural.
+Épanchement pleural de faible abondance à droite.
+Masse surrénalienne gauche de 3 cm.
+Emphysème centrolobulaire prédominant aux apex.
+CONCLUSION :
+Nodule pulmonaire gauche à surveiller.
+Emphysème centrolobulaire.`;
+
+async function api(path, body) {
+  const r = await fetch(path, body ? {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)} : {});
+  if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+  return r.json();
+}
+
+function esc(s) { return s.replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c])); }
+
+function renderView() {
+  const text = state.text;
+  const marks = [];
+  state.issues.forEach((iss, n) => {
+    if (state.decisions[n]) return;
+    iss.evidence.forEach(ev => marks.push({s: ev.start, e: ev.end, sev: iss.severity, n: n + 1}));
+  });
+  marks.sort((a, b) => a.s - b.s || b.e - a.e);
+  let html = "", pos = 0;
+  for (const m of marks) {
+    if (m.s < pos) continue;            // skip overlaps
+    html += hl(text.slice(pos, m.s));
+    html += `<mark class="${m.sev}">${hl(text.slice(m.s, m.e))}<sup>${m.n}</sup></mark>`;
+    pos = m.e;
+  }
+  html += hl(text.slice(pos));
+  $("#view").innerHTML = html;
+}
+function hl(s) { return esc(s).replace(/\[(NOM|MEDECIN|DATE|DATE_NAISSANCE|ID|TEL|EMAIL|ADRESSE)\]/g, '<span class="ph">[$1]</span>'); }
+
+function renderIssues() {
+  const box = $("#issues");
+  box.innerHTML = "";
+  const counts = {critical: 0, warning: 0, info: 0};
+  state.issues.forEach(i => counts[i.severity]++);
+  const left = state.issues.filter((_, n) => !state.decisions[n]).length;
+  $("#chips").innerHTML = state.issues.length
+    ? Object.entries(counts).filter(([, c]) => c).map(([k, c]) => `<span class="chip ${k}">${c} ${SEV[k].toLowerCase()}</span>`).join("")
+      + `<span class="chip ok">${left} restant(s)</span>`
+    : `<span class="chip ok">Aucun problème détecté par les règles</span>`;
+  if (!state.issues.length) { box.innerHTML = `<div class="card empty">Rien à signaler. Relisez quand même avant de signer.</div>`; return; }
+  state.issues.forEach((iss, n) => {
+    const d = state.decisions[n];
+    const el = document.createElement("article");
+    el.className = "card issue" + (d ? " done" : "");
+    const sug = iss.suggestion
+      ? (iss.suggestion.mode === "replace"
+        ? `<p class="msg"><b>Proposition :</b> « ${esc(iss.suggestion.original)} » → « ${esc(iss.suggestion.replacement)} »</p>`
+        : `<p class="msg"><b>Proposition :</b> ajouter à la conclusion « ${esc(iss.suggestion.replacement)} »</p>`) : "";
+    el.innerHTML = `
+      <div class="ihead"><span class="badge ${iss.severity}">${SEV[iss.severity]}</span>
+        <span class="kind">${esc(iss.category)} · ${iss.rule_id}</span><span class="num">${n + 1}</span></div>
+      <p class="title">${esc(iss.title)}</p>
+      ${iss.evidence.map(e => `<div class="ev">${esc(e.text)}</div>`).join("")}
+      ${sug}<p class="msg">${esc(iss.message)}</p>
+      ${d ? `<div class="decided">${d === "accepted" ? "Accepté" : "Rejeté"}</div>`
+          : `<div class="actions">
+              <button class="primary" data-a="accept">${iss.suggestion ? "Appliquer" : "Je corrige"}</button>
+              <button data-a="reject">Rejeter</button></div>`}`;
+    el.querySelectorAll("button").forEach(b => b.onclick = () => decide(n, b.dataset.a));
+    box.appendChild(el);
+  });
+}
+
+async function decide(n, action) {
+  const iss = state.issues[n];
+  const decision = action === "accept" ? "accepted" : "rejected";
+  api("/api/decision", {report_id: state.reportId, check_id: state.checkId, rule_id: iss.rule_id, decision}).catch(() => {});
+  if (decision === "accepted" && iss.suggestion) {
+    try {
+      const r = await api("/api/apply", {text: state.text, suggestion: iss.suggestion});
+      await runCheck(r.text, true);           // re-check the corrected report
+      return;
+    } catch (e) { $("#err").textContent = e.message; }
+  }
+  state.decisions[n] = decision;
+  renderView(); renderIssues();
+}
+
+async function runCheck(text, already) {
+  $("#err").textContent = "";
+  state.exam = $("#exam").value;
+  const r = await api("/api/check", {text, exam: state.exam, already_deidentified: !!already, report_id: state.reportId});
+  const prev = already ? state.decisions : {};
+  state = {text: r.text, issues: r.issues, decisions: {}, exam: state.exam, reportId: r.report_id, checkId: r.check_id};
+  const masked = Object.entries(r.masked || {}).map(([k, v]) => `${v} ${k}`).join(", ");
+  $("#meta").textContent = `Vérifié en ${r.ms} ms · ${r.versions.rule_pack} · lexique v${r.versions.lexicon}` + (masked ? ` · masqué : ${masked}` : "");
+  $("#input").hidden = true; $("#view").hidden = false;
+  $("#edit").hidden = false; $("#copy").hidden = false;
+  $("#ltitle").textContent = $("#exam").selectedOptions[0].textContent;
+  renderView(); renderIssues();
+}
+
+$("#check").onclick = () => {
+  const text = $("#input").hidden ? state.text : $("#input").value;
+  if (!text.trim()) { $("#err").textContent = "Collez d'abord un compte rendu."; return; }
+  runCheck(text, $("#input").hidden).catch(e => $("#err").textContent = e.message);
+};
+$("#edit").onclick = () => { $("#input").value = state.text; $("#input").hidden = false; $("#view").hidden = true; $("#ltitle").textContent = "Modifiez le compte rendu"; };
+$("#copy").onclick = async () => { await navigator.clipboard.writeText(state.text); $("#copy").textContent = "Copié ✓"; setTimeout(() => $("#copy").textContent = "Copier le compte rendu", 1500); };
+
+api("/api/exams").then(xs => { $("#exam").innerHTML = xs.map(x => `<option value="${x.key}">${esc(x.label)}</option>`).join(""); });
+$("#input").value = SAMPLE;
+</script>
+</body>
+</html>

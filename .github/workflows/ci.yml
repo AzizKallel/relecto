@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: relecto
+          POSTGRES_USER: relecto
+          POSTGRES_PASSWORD: ci-only-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U relecto" --health-interval 5s --health-retries 10
+    env:
+      PYTHONPATH: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Clinical content is valid
+        run: python -m relecto validate-content
+      - name: Tests (SQLite)
+        run: cd backend && python -m unittest discover -s tests -t .
+      - name: Tests (PostgreSQL, same as production)
+        env:
+          RELECTO_DATABASE_URL: postgresql+psycopg://relecto:ci-only-password@localhost:5432/relecto
+        run: python -m relecto db-upgrade && cd backend && python -m unittest discover -s tests -t .
+      - name: Quality gate on the golden set
+        run: python -m relecto gate
+      - name: Docker image builds
+        run: docker build -t relecto:ci .
