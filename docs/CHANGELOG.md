@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.0 — 1 Nov 2026 (Phase 1, step 1: chest CT pipeline)
+- `relecto analyze STUDY`: DICOM CT loading with geometry and QC (orientation, duplicates, spacing), HU rescale.
+- Reads DICOM SEG annotations, merges the 4 LIDC readers into consensus nodules.
+- Measurements: long/short axis, volume, mean HU, side (patient LPS geometry), lung third (body-limited lung mask).
+- Key images in radiological convention, French draft report (measured facts only, placeholders elsewhere).
+- New check IMG-001: nodule on the images missing or on the wrong side in the report.
+- Validated on LIDC-IDRI 0001–0005: sizes and volumes within the readers' ranges; 3–6 s per study.
+- 9 new tests (synthetic scans with known answers, incl. mirrored storage; LIDC test when scans are present). 42 tests.
+
 ## 0.3.0 — 31 Oct 2026 (R1, part 1)
 - New project layout: `backend/`, `clinical-content/`, `deploy/`, `docs/`, CI.
 - Clinical vocabulary and per-exam rule packs moved to YAML (`clinical-content/`), validated on load; a rule runs only if its exam pack enables it.

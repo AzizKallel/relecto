@@ -4,7 +4,7 @@ The checker reads report TEXT only. It never adds findings, measurements or
 diagnoses: every issue points to words already in the report.
 """
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 
 def check_report(*args, **kwargs):

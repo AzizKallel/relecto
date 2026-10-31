@@ -1,6 +1,6 @@
-# Relecto — v0.3
+# Relecto — v0.4
 
-AI-assisted radiology reporting for imaging centres. The pipeline is images → AI draft → **checker** → radiologist signs. This repository contains the **checker**, the de-identification, the database, the local web app and the quality gate (release R1, part 1).
+AI-assisted radiology reporting for imaging centres. The pipeline is images → AI draft → **checker** → radiologist signs. This repository contains the **chest CT image pipeline** (Phase 1), the **checker**, the de-identification, the database, the local web app and the quality gate (release R1, part 1).
 
 The checker reads report text only. It never adds findings, measurements or diagnoses: every issue points to words already in the report.
 
@@ -17,7 +17,8 @@ Other commands:
 ./relecto check clinical-content/examples/demo_ct_chest.txt --exam ct_chest
 ./relecto gate                 # quality gate on the golden set (fails if the checker got worse)
 ./relecto validate-content     # check the clinical YAML files after an edit
-./relecto test                 # 33 automated tests
+./relecto test                 # 42 automated tests
+./relecto analyze ../dicom-test/LIDC-IDRI-0001   # chest CT study → findings, key images, draft report, checks
 ./relecto db-upgrade           # apply database migrations
 ```
 
@@ -29,10 +30,21 @@ docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d --build
 ```
 Open http://127.0.0.1:8000. This is the edge-node profile S (checker only). Login and roles (Keycloak) come in R1 part 2 — until then, keep it on your own machine.
 
+## Chest CT pipeline (Phase 1)
+
+```bash
+./tools/get-test-ct.sh 5                          # public LIDC-IDRI scans → ../dicom-test (outside the repo)
+./relecto analyze ../dicom-test/LIDC-IDRI-0001    # results → ../analysis/LIDC-IDRI-0001
+```
+Loads the CT series (DICOM geometry checked), finds lung nodules, measures long/short axis and volume, sets side and lung third, renders key images, writes a French draft with placeholders for the radiologist, runs the checker plus the image-vs-report check (IMG-001: nodule seen on the images but missing or on the wrong side in the report).
+
+Today the nodules come from the radiologists' outlines shipped with LIDC-IDRI (`source="reference"`). The AI detection model plugs into the same slot next; the outlines then become the answer key it is scored against. Sources and licence: `docs/DATA_SOURCES.md`.
+
 ## Project layout
 
 ```text
 backend/relecto/
+  imaging/     CT loading, nodule measurement, key images, draft report, image-vs-report check
   checker/     rules engine (parser, extraction, rules, YAML loader)
   deid/        de-identification before any check or storage
   llm/         optional local LLM layer with guardrails (off by default)

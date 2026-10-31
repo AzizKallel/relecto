@@ -5,6 +5,7 @@
   relecto gate                      # quality gate on the golden set (exit 1 if it fails)
   relecto db-upgrade                # apply database migrations
   relecto validate-content          # check the clinical YAML files
+  relecto analyze STUDY_DIR         # CT study -> findings -> draft report -> checks -> images
 """
 
 import argparse
@@ -86,6 +87,29 @@ def cmd_validate(args) -> int:
     return 0
 
 
+def cmd_analyze(args) -> int:
+    from pathlib import Path
+    from .imaging.pipeline import analyze_study
+
+    study = Path(args.study)
+    out = Path(args.out) if args.out else study.parent.parent / "analysis" / study.name
+    a = analyze_study(study, out)
+    print(f"\n{a.ct.meta.get('patient_id')} — {a.ct.hu.shape[0]} coupes, "
+          f"{a.ct.spacing[1]:.2f} x {a.ct.spacing[2]:.2f} x {a.ct.spacing[0]:.2f} mm, {a.seconds} s")
+    for q in a.ct.qc:
+        print(f"  QC : {q}")
+    print(f"\n{len(a.findings)} résultat(s) :")
+    for f in a.findings:
+        print(f"  {f.finding_id}  {f.long_axis_mm} x {f.short_axis_mm} mm  poumon {'droit' if f.side == 'R' else 'gauche'}"
+              f"  tiers {f.zone}  coupe {f.key_slice + 1}  ({f.readers} lecteur(s))")
+    print("\n--- BROUILLON ---\n" + a.draft)
+    print(f"--- VÉRIFICATION : {len(a.issues)} point(s) ---")
+    for i in a.issues:
+        print(f"  [{i.severity}] {i.rule_id} {i.title}")
+    print(f"\nFichiers : {out}")
+    return 0
+
+
 def main(argv=None) -> int:
     from .checker.content import get_content
 
@@ -114,6 +138,11 @@ def main(argv=None) -> int:
 
     sub.add_parser("db-upgrade", help="Mettre à jour la base de données").set_defaults(func=cmd_db_upgrade)
     sub.add_parser("validate-content", help="Vérifier les fichiers cliniques").set_defaults(func=cmd_validate)
+
+    a = sub.add_parser("analyze", help="Analyser un examen scanner (dossier DICOM)")
+    a.add_argument("study")
+    a.add_argument("--out", default=None, help="Dossier de sortie (défaut : ../analysis/<examen>)")
+    a.set_defaults(func=cmd_analyze)
 
     args = p.parse_args(argv)
     if getattr(args, "exam", None) and args.exam not in get_content().packs:
