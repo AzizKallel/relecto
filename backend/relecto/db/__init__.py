@@ -10,7 +10,7 @@ from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from .models import AuditEvent, Base, CheckRun, Centre, Decision, Report, User
+from .models import AuditEvent, Base, CheckRun, Centre, Decision, Finding, Job, Report, Study, User
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 REPO_DIR = BACKEND_DIR.parent
@@ -30,6 +30,13 @@ def get_engine(url: str | None = None):
     url = url or database_url()
     kwargs = {"connect_args": {"check_same_thread": False}} if url.startswith("sqlite") else {"pool_pre_ping": True}
     return create_engine(url, **kwargs)
+
+
+def data_dir() -> Path:
+    """Where images and analysis results live on the edge node (never in the repository)."""
+    d = Path(os.environ.get("RELECTO_DATA_DIR") or (REPO_DIR / "data" / "private"))
+    d.mkdir(parents=True, exist_ok=True)
+    return d
 
 
 def migrate(url: str | None = None) -> None:
@@ -63,5 +70,5 @@ def audit(session: Session, action: str, object_type: str | None = None, object_
                            user_id=user_id, centre_id=centre_id, details=details or None))
 
 
-__all__ = ["Base", "Centre", "User", "Report", "CheckRun", "Decision", "AuditEvent",
-           "database_url", "get_engine", "migrate", "session_scope", "audit"]
+__all__ = ["Base", "Centre", "User", "Report", "CheckRun", "Decision", "AuditEvent", "Study", "Finding", "Job",
+           "database_url", "data_dir", "get_engine", "migrate", "session_scope", "audit"]

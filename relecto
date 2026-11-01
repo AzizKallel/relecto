@@ -1,5 +1,10 @@
 #!/bin/bash
-# Relecto launcher: ./relecto serve | check FILE | gate | db-upgrade | validate-content | test
+# Relecto launcher (Mac / Linux, without Docker):
+#   ./relecto serve | worker | dicom | import FOLDER | create-user EMAIL --name N --role R
+#   ./relecto analyze STUDY | evaluate-ai STUDIES… | check FILE | gate | db-upgrade | validate-content
+#   ./relecto test          run the automated tests
+#   ./relecto install-ai    install the image AI models (PyTorch + TotalSegmentator, ~2 GB)
+# With Docker (recommended for a centre): double-click start.command — see docs/DEPLOYMENT.md
 set -e
 cd "$(dirname "$0")"
 if [ ! -x .venv/bin/python ]; then
@@ -13,7 +18,8 @@ if [ "$(cat .venv/.req-hash 2>/dev/null)" != "$REQ_HASH" ]; then
   echo "$REQ_HASH" > .venv/.req-hash
 fi
 export PYTHONPATH="$PWD/backend"
-if [ "$1" = "test" ]; then
-  cd backend && exec ../.venv/bin/python -m unittest discover -s tests -t .
-fi
+case "$1" in
+  test) cd backend && exec ../.venv/bin/python -m unittest discover -s tests -t . ;;
+  install-ai) exec .venv/bin/pip install -r requirements-ai.txt ;;
+esac
 exec .venv/bin/python -m relecto "$@"

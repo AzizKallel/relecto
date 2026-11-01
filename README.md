@@ -1,86 +1,76 @@
-# Relecto — v0.4
+# Relecto — v0.5
 
-AI-assisted radiology reporting for imaging centres. The pipeline is images → AI draft → **checker** → radiologist signs. This repository contains the **chest CT image pipeline** (Phase 1), the **checker**, the de-identification, the database, the local web app and the quality gate (release R1, part 1).
+AI radiology reporting platform for imaging centres. The scanner sends a chest CT, AI models
+locate and measure the lung nodules, the platform drafts the French report, the checker flags
+errors, and the radiologist corrects and signs it. All of this runs on the centre's own
+machine; no image or report leaves it.
 
-The checker reads report text only. It never adds findings, measurements or diagnoses: every issue points to words already in the report.
-
-## Start (Mac)
-
-```bash
-./relecto serve        # first run installs everything into .venv, then serves http://127.0.0.1:8000
-```
-Or double-click **`start.command`** (right-click → Open the first time).
-
-Other commands:
-
-```bash
-./relecto check clinical-content/examples/demo_ct_chest.txt --exam ct_chest
-./relecto gate                 # quality gate on the golden set (fails if the checker got worse)
-./relecto validate-content     # check the clinical YAML files after an edit
-./relecto test                 # 42 automated tests
-./relecto analyze ../dicom-test/LIDC-IDRI-0001   # chest CT study → findings, key images, draft report, checks
-./relecto db-upgrade           # apply database migrations
+```text
+Scanner / PACS ──DICOM──▶ receiver ─┐
+Secretary ── .zip upload ──────────┤──▶ worklist ──▶ AI worker (lobes + nodules, measurements)
+                                    │                    │
+                                    │                    ▼
+                         radiologist ◀── viewer + draft report + checks ──▶ signature ──▶ PDF
 ```
 
-## Run with Docker (app + PostgreSQL)
+## Start in a centre (Docker)
+
+Double-click **`start.command`** (Docker Desktop must be running, memory ≥ 10 GB), or:
 
 ```bash
-cp deploy/.env.example deploy/.env      # then put a long random password in it
+cp deploy/.env.example deploy/.env      # set the two secrets
 docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d --build
 ```
-Open http://127.0.0.1:8000. This is the edge-node profile S (checker only). Login and roles (Keycloak) come in R1 part 2 — until then, keep it on your own machine.
 
-## Chest CT pipeline (Phase 1)
+Open http://127.0.0.1:8000: the first screen creates the administrator account. Full guide,
+including connecting the scanner: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+
+## What it does
+
+| Area | Features |
+|---|---|
+| Intake | DICOM receiver (AE `RELECTO`, port 11112, sender allow-list), `.zip` upload, folder import, studies grouped and de-duplicated by Study UID |
+| AI | Lung lobe segmentation and lung nodule detection (open-source models, run locally — [`docs/MODELS.md`](docs/MODELS.md)); our own measurement of long/short axis, volume, density, side and lobe; geometry checks |
+| Reading | Worklist with status, priority, assignment, search · browser viewer: axial/coronal/sagittal, lung/mediastinum/bone windows, scroll, zoom, pan, nodule and lobe overlays, jump to finding |
+| Report | Draft that states only measured facts and leaves placeholders, checker (laterality, negation, measurements, modality, structure…), image-vs-report check (IMG-001), one-click fixes, signature that locks the report, PDF with the centre's header |
+| Control | Accounts and roles (admin, radiologist, secretary), throttled login, audit log of every action (never report text), quality dashboard (AI findings confirmed, suggestions accepted, turnaround), versions of engine, rules and models stamped on every signed report |
+
+## Commands (without Docker)
 
 ```bash
-./tools/get-test-ct.sh 5                          # public LIDC-IDRI scans → ../dicom-test (outside the repo)
-./relecto analyze ../dicom-test/LIDC-IDRI-0001    # results → ../analysis/LIDC-IDRI-0001
+./relecto serve            # web app http://127.0.0.1:8000
+./relecto worker           # AI worker   (./relecto install-ai first)
+./relecto dicom            # DICOM receiver
+./relecto import FOLDER    # import DICOM studies from a folder
+./relecto evaluate-ai ../dicom-test/LIDC-IDRI-000*   # score the AI against reference outlines
+./relecto test             # automated tests
 ```
-Loads the CT series (DICOM geometry checked), finds lung nodules, measures long/short axis and volume, sets side and lung third, renders key images, writes a French draft with placeholders for the radiologist, runs the checker plus the image-vs-report check (IMG-001: nodule seen on the images but missing or on the wrong side in the report).
-
-Today the nodules come from the radiologists' outlines shipped with LIDC-IDRI (`source="reference"`). The AI detection model plugs into the same slot next; the outlines then become the answer key it is scored against. Sources and licence: `docs/DATA_SOURCES.md`.
 
 ## Project layout
 
 ```text
 backend/relecto/
-  imaging/     CT loading, nodule measurement, key images, draft report, image-vs-report check
-  checker/     rules engine (parser, extraction, rules, YAML loader)
-  deid/        de-identification before any check or storage
-  llm/         optional local LLM layer with guardrails (off by default)
-  api/         FastAPI app + web screen
-  db/          models (reports, checks, decisions, audit log)
-  quality.py   quality gate
-  cli.py       the ./relecto commands
-backend/migrations/   database migrations (Alembic)
-backend/tests/        automated tests
+  api/         web API + web application (static/app.html)
+  imaging/     CT loading, AI models, measurements, draft, viewer data, evaluation
+  checker/     report rules engine (French)
+  auth.py      accounts, sessions, roles
+  studies.py   study intake (zip, folder) · dicom_receiver.py (scanner / PACS)
+  worker.py    AI job queue · reporting.py (PDF) · deid/ · llm/ · db/
+backend/migrations/   database migrations
+backend/tests/        automated tests (synthetic scans; LIDC tests when downloaded)
 clinical-content/     owned by radiologists: vocabulary, rule packs, golden sets
-deploy/               Docker Compose for an edge node
-.github/workflows/    automatic checks on every push
+deploy/               Docker Compose (db, app, worker, dicom), backup script
+docs/                 deployment, models, validation, data sources, changelog
 ```
 
-## Editing the medical rules (for the clinical lead)
+## Status and limits
 
-Everything medical is in `clinical-content/`, in French, with comments:
+Ready for a **supervised pilot**: every report is read and signed by a radiologist.
 
-- `lexicon/fr.yaml` — findings, sides, negations, one-sided anatomy.
-- `rule-packs/<exam>.yaml` — required sections, technique, which rules run and their severity.
-- `golden-sets/*.jsonl` — annotated reference reports. Every release must pass them.
+Not done yet, and required before routine clinical use:
 
-After an edit: raise the file's `version`, run `./relecto validate-content` and `./relecto gate`.
-
-## Data protection
-
-- Every report is de-identified before it is checked or stored. The database holds de-identified text only; the audit log never holds report text.
-- `data/private/` (local database) is never committed. Never put real patient data in the repository.
-- De-identification is rules-based and **not certified**: validate it on real samples with human review before any pilot.
-
-## Status
-
-| Done (v0.3) | Next (R1 part 2) |
-| --- | --- |
-| YAML rule packs, MOD-001, versions on every report | Login and roles (Keycloak, OIDC) |
-| Database + migrations, audit log | Worklist and report editor screens |
-| Quality gate, CI, Docker | 100 annotated reports from the clinical lead |
-
-Scores on the golden set are on **synthetic reports written alongside the rules**: they prove the code works, not clinical performance.
+- Validation on Tunisian scans annotated by the centre's radiologists (target: 100+ CT).
+- Legal: INPDP declaration/authorisation for processing health data; data-processing contract with each centre.
+- Medical-device route (EU MDR class IIa for diagnostic-support software; quality system ISO 13485, IEC 62304, ISO 14971).
+- HTTPS and the centre's firewall when opened to the network; nightly backups scheduled.
+- More exams: today the AI covers chest CT nodules; other exams get the checker and manual reporting.

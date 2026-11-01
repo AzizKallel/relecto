@@ -18,6 +18,11 @@ def _noun(f: NoduleFinding) -> str:
     return "Masse pulmonaire" if f.long_axis_mm > 30 else "Nodule pulmonaire"
 
 
+def _de(f: NoduleFinding) -> str:
+    """'du lobe supérieur droit' / 'du tiers moyen du poumon gauche'."""
+    return f"du {f.location_fr}"
+
+
 def _fmt(x: float) -> str:
     return f"{x:.0f}" if x >= 10 else f"{x:.1f}".replace(".", ",")
 
@@ -36,12 +41,12 @@ def draft_ct_chest(ct: CTVolume, findings: List[NoduleFinding], indication: str 
     if findings:
         for f in findings:
             lines.append(
-                f"{_noun(f)} du tiers {f.zone} du poumon {SIDE_FR[f.side]}, mesurant {_fmt(f.long_axis_mm)} x "
+                f"{_noun(f)} {_de(f)}, mesurant {_fmt(f.long_axis_mm)} x "
                 f"{_fmt(f.short_axis_mm)} mm (densité moyenne {f.mean_hu:.0f} UH).")
     else:
-        lines.append("Pas de nodule pulmonaire détecté par l'analyse automatique.")
+        lines.append("Pas de nodule pulmonaire détecté par l'analyse automatique (à confirmer par le radiologue).")
     lines += [f"Médiastin, plèvre, paroi et autres structures : {PLACEHOLDER}", "", "CONCLUSION :"]
     for f in findings:
-        lines.append(f"{_noun(f)} {SIDE_FR[f.side]} de {_fmt(f.long_axis_mm)} mm (tiers {f.zone}).")
+        lines.append(f"{_noun(f)} {_de(f)} de {_fmt(f.long_axis_mm)} mm.")
     lines.append(f"Conclusion et conduite à tenir : {PLACEHOLDER}")
     return "\n".join(lines) + "\n"

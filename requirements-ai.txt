@@ -1,0 +1,3 @@
+# Image AI models (installed in the worker image; ~2 GB with PyTorch CPU).
+# GPU servers: install the CUDA build of torch first, then this file.
+TotalSegmentator>=2.10

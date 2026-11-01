@@ -1,0 +1,680 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relecto</title>
+<style>
+:root{--ink:#0F1B2D;--muted:#5B6675;--line:#E3E6EB;--bg:#F4F6F8;--card:#fff;--accent:#0B6E6E;--accent-2:#0E8A8A;--accent-soft:#E6F2F2;
+--crit:#B42318;--crit-bg:#FDECEA;--warn:#93370D;--warn-bg:#FEF0C7;--info:#1D4ED8;--info-bg:#E8EEFD;--ok:#1E5E2A;--ok-bg:#E3F4E6;
+--vbg:#05080D;--vpanel:#0E141C;--vline:#1F2A36;--vtext:#C9D3DD;--marker:#2EC4B6}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button{font:inherit;cursor:pointer;min-height:36px;padding:0 14px;border-radius:8px;border:1px solid #CBD2DA;background:#fff;color:var(--ink);font-weight:500}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+button.primary:hover{background:var(--accent-2)}
+button.danger{color:var(--crit);border-color:#F1B8B2}
+button.ghost{border-color:transparent;background:transparent}
+button.sm{min-height:28px;padding:0 10px;font-size:12px}
+button:disabled{opacity:.45;cursor:default}
+input,select,textarea{font:inherit;color:var(--ink);border:1px solid #CBD2DA;border-radius:8px;background:#fff}
+input,select{height:38px;padding:0 10px}
+label.f{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:600;color:#4A5565}
+.hidden{display:none!important}
+.muted{color:var(--muted)}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.b-received,.b-queued{background:#EEF0F3;color:#4A5565}.b-analyzing{background:var(--info-bg);color:var(--info)}
+.b-ready{background:var(--accent-soft);color:var(--accent)}.b-reported{background:var(--warn-bg);color:var(--warn)}
+.b-signed{background:var(--ok-bg);color:var(--ok)}.b-failed{background:var(--crit-bg);color:var(--crit)}
+.b-urgent{background:var(--crit);color:#fff}
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+.spin{animation:sp 1s linear infinite;display:inline-block}@keyframes sp{to{transform:rotate(360deg)}}
+
+/* auth */
+#auth{min-height:100%;display:flex;align-items:center;justify-content:center;padding:24px}
+.authcard{width:100%;max-width:400px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:32px;display:flex;flex-direction:column;gap:14px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px}
+.logo i{width:30px;height:30px;border-radius:8px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:15px}
+.err{color:var(--crit);font-size:13px;min-height:18px}
+
+/* shell */
+#shell{height:100%;display:flex;flex-direction:column}
+header.top{background:#fff;border-bottom:1px solid var(--line);height:56px;padding:0 20px;display:flex;align-items:center;gap:20px;flex:none}
+nav{display:flex;gap:4px}
+nav a{padding:8px 12px;border-radius:8px;color:var(--muted);text-decoration:none;font-weight:600}
+nav a.on{background:var(--accent-soft);color:var(--accent)}
+.grow{flex:1}
+.who{display:flex;align-items:center;gap:10px;font-size:13px}
+.avatar{width:30px;height:30px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px}
+.page{flex:1;overflow:auto;padding:20px}
+
+/* worklist */
+.wl-head{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:14px}
+.tabs{display:flex;gap:4px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:4px}
+.tabs button{border:none;min-height:30px;font-size:13px;color:var(--muted)}
+.tabs button.on{background:var(--accent-soft);color:var(--accent);font-weight:700}
+.tabs .n{font-size:11px;margin-left:4px;opacity:.8}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px}
+table{width:100%;border-collapse:collapse}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);font-weight:700;background:#FAFBFC}
+td{padding:11px 14px;border-bottom:1px solid #EEF0F3;vertical-align:middle}
+tr.row{cursor:pointer}tr.row:hover td{background:#F7FAFA}
+.pt{font-weight:600}.sub{font-size:12px;color:var(--muted)}
+.empty{padding:48px;text-align:center;color:var(--muted)}
+.drop{border:2px dashed #CBD2DA;border-radius:12px;padding:18px;text-align:center;color:var(--muted);margin-bottom:14px;background:#fff}
+.drop.over{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.progress{height:6px;background:#EEF0F3;border-radius:3px;overflow:hidden;margin-top:8px}.progress>div{height:100%;background:var(--accent);width:0}
+
+/* study */
+#study{display:grid;grid-template-columns:280px minmax(0,1fr) 440px;grid-template-rows:auto minmax(0,1fr);height:100%;gap:0}
+.pbar{grid-column:1/-1;background:#fff;border-bottom:1px solid var(--line);padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px 22px;align-items:center}
+.pbar .pname{font-size:16px;font-weight:700}
+.pbar .kv{font-size:12px;color:var(--muted)}.pbar .kv b{color:var(--ink);font-weight:600}
+.col{min-height:0;overflow:auto}
+.findings{background:#fff;border-right:1px solid var(--line);padding:14px;display:flex;flex-direction:column;gap:10px}
+.findings h3,.editor h3{margin:0;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.fcard{border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;display:flex;flex-direction:column;gap:6px}
+.fcard:hover,.fcard.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.fcard.rejected{opacity:.5}
+.fcard .t{display:flex;justify-content:space-between;align-items:center;font-weight:700}
+.fcard .m{font-size:12px;color:var(--muted)}
+.fcard .acts{display:flex;gap:6px}
+.st-confirmed{color:var(--ok)}.st-rejected{color:var(--crit)}.st-proposed{color:var(--muted)}
+.note{font-size:12px;background:var(--warn-bg);color:var(--warn);border-radius:8px;padding:8px 10px}
+.ainfo{font-size:11.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px;margin-top:auto}
+
+.viewer{background:var(--vbg);display:flex;flex-direction:column;min-height:0;color:var(--vtext)}
+.vtools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 10px;background:var(--vpanel);border-bottom:1px solid var(--vline)}
+.vtools button{background:#16202B;border-color:#2A3846;color:var(--vtext);min-height:30px;font-size:12px}
+.vtools button.on{background:#0B4F4F;border-color:#127A7A;color:#E8FFFD}
+.vsep{width:1px;height:22px;background:var(--vline);margin:0 4px}
+.vstage{flex:1;position:relative;overflow:hidden;cursor:crosshair;touch-action:none}
+.vstage canvas{position:absolute;left:0;top:0;transform-origin:0 0;image-rendering:auto}
+.ov{position:absolute;font:12px/1.4 ui-monospace,Menlo,monospace;color:#AFC1D2;pointer-events:none;text-shadow:0 0 3px #000}
+.ov.tl{left:10px;top:8px}.ov.tr{right:10px;top:8px;text-align:right}.ov.bl{left:10px;bottom:8px}.ov.br{right:10px;bottom:8px;text-align:right}
+.ov.lft{left:10px;top:50%;font-size:15px;font-weight:700;color:#fff}.ov.rgt{right:10px;top:50%;font-size:15px;font-weight:700;color:#fff}
+.vslider{display:flex;align-items:center;gap:10px;padding:6px 12px;background:var(--vpanel);border-top:1px solid var(--vline);font-size:12px}
+.vslider input{flex:1;height:auto;accent-color:var(--marker)}
+.vmsg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;color:#8FA3B5;text-align:center;padding:20px}
+
+.editor{background:#fff;border-left:1px solid var(--line);padding:14px;display:flex;flex-direction:column;gap:10px}
+.editor textarea{width:100%;min-height:340px;flex:1;resize:vertical;padding:12px;font:13px/1.7 "IBM Plex Mono",ui-monospace,Menlo,monospace}
+.editor textarea[readonly]{background:#FAFBFC}
+.erow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.issues{display:flex;flex-direction:column;gap:8px}
+.issue{border:1px solid var(--line);border-left-width:4px;border-radius:8px;padding:8px 10px;font-size:13px}
+.issue.critical{border-left-color:var(--crit);background:#FFFAFA}.issue.warning{border-left-color:#DC6803}.issue.info{border-left-color:var(--info)}
+.issue .h{display:flex;justify-content:space-between;gap:8px;font-weight:700}
+.issue .ev{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--muted);margin-top:3px}
+.issue .s{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.sev{font-size:10.5px;font-weight:800;letter-spacing:.04em}.sev.critical{color:var(--crit)}.sev.warning{color:var(--warn)}.sev.info{color:var(--info)}
+.signed-box{background:var(--ok-bg);color:var(--ok);border-radius:8px;padding:10px 12px;font-size:13px}
+.ver{font-size:11px;color:var(--muted)}
+
+/* misc pages */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.stat{padding:16px}.stat .v{font-size:28px;font-weight:800}.stat .l{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.05em;font-weight:700}
+.section{margin-top:22px}.section h2{font-size:15px;margin:0 0 10px}
+.form{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;padding:14px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;z-index:50;max-width:90vw}
+.modal-bg{position:fixed;inset:0;background:rgba(15,27,45,.45);display:flex;align-items:center;justify-content:center;z-index:40;padding:16px}
+.modal{background:#fff;border-radius:14px;padding:22px;max-width:520px;width:100%;display:flex;flex-direction:column;gap:12px}
+@media (max-width:1200px){#study{grid-template-columns:240px minmax(0,1fr) 380px}}
+@media (max-width:960px){#study{grid-template-columns:1fr;grid-template-rows:auto auto 70vh auto;height:auto}.col{overflow:visible}.findings,.editor{border:none}}
+</style>
+</head>
+<body>
+
+<div id="auth" class="hidden">
+  <form class="authcard" id="authForm" autocomplete="on">
+    <div class="logo"><i>R</i>Relecto</div>
+    <div id="authTitle" style="font-size:20px;font-weight:700">Connexion</div>
+    <div id="setupFields" class="hidden" style="display:flex;flex-direction:column;gap:12px">
+      <div class="muted" style="font-size:13px">Premier démarrage : créez le compte administrateur du centre.</div>
+      <label class="f">Nom du centre<input id="aCentre" placeholder="Centre d'imagerie …"></label>
+      <label class="f">Votre nom<input id="aName" placeholder="Nom Prénom"></label>
+    </div>
+    <label class="f">Email<input id="aEmail" type="email" autocomplete="username" required></label>
+    <label class="f">Mot de passe<input id="aPass" type="password" autocomplete="current-password" required></label>
+    <div class="err" id="aErr"></div>
+    <button class="primary" type="submit" id="aBtn">Se connecter</button>
+  </form>
+</div>
+
+<div id="shell" class="hidden">
+  <header class="top">
+    <div class="logo"><i>R</i>Relecto</div>
+    <nav id="nav">
+      <a href="#/" data-r="worklist">Liste de travail</a>
+      <a href="#/stats" data-r="stats">Qualité</a>
+      <a href="#/admin" data-r="admin" class="adm">Administration</a>
+      <a href="/checker" target="_blank">Vérificateur de texte</a>
+    </nav>
+    <div class="grow"></div>
+    <span id="aiBadge" class="badge"></span>
+    <div class="who"><div class="avatar" id="avatar"></div><div><div id="uName" style="font-weight:600"></div><div class="sub" id="uRole"></div></div>
+      <button class="sm ghost" id="pwBtn" title="Changer le mot de passe">Mot de passe</button>
+      <button class="sm" id="logoutBtn">Déconnexion</button></div>
+  </header>
+  <div class="page" id="page"></div>
+</div>
+
+<template id="tWorklist">
+  <div class="drop" id="drop">Déposez ici le <b>.zip</b> d'un examen DICOM, ou <button class="sm" id="pick">choisir un fichier</button>
+    <input type="file" id="file" accept=".zip" class="hidden">
+    <div class="sub" style="margin-top:6px">Les scanners et le PACS peuvent aussi envoyer directement à Relecto (DICOM : AE <b>RELECTO</b>, port <b>11112</b>).</div>
+    <div class="progress hidden" id="upProg"><div></div></div></div>
+  <div class="wl-head">
+    <div class="tabs" id="tabs">
+      <button data-s="todo" class="on">À faire<span class="n"></span></button>
+      <button data-s="ready">Prêts à lire<span class="n"></span></button>
+      <button data-s="signed">Signés<span class="n"></span></button>
+      <button data-s="">Tous</button>
+      <button data-s="mine">Mes examens</button>
+    </div>
+    <div class="grow"></div>
+    <input id="q" placeholder="Patient, identifiant, n° d'examen…" style="width:280px">
+  </div>
+  <div class="card"><table><thead><tr><th></th><th>Patient</th><th>Examen</th><th>Date</th><th>Statut</th><th>IA</th><th>Radiologue</th></tr></thead>
+    <tbody id="rows"></tbody></table><div id="wlEmpty" class="empty hidden">Aucun examen.</div></div>
+</template>
+
+<template id="tStudy">
+  <div id="study">
+    <div class="pbar">
+      <button class="sm" id="back">← Liste</button>
+      <div class="pname" id="pName"></div>
+      <div class="kv">ID <b id="pId"></b></div><div class="kv">Né(e) <b id="pBirth"></b></div>
+      <div class="kv">Examen <b id="pDesc"></b></div><div class="kv">Date <b id="pDate"></b></div>
+      <div class="kv">N° <b id="pAcc"></b></div>
+      <span id="pStatus"></span><span id="pPrio"></span>
+      <div class="grow"></div>
+      <label class="kv">Radiologue <select id="assign" style="height:30px"></select></label>
+      <button class="sm" id="urgentBtn"></button>
+      <button class="sm" id="reanalyze">Relancer l'analyse</button>
+    </div>
+    <div class="col findings">
+      <h3>Résultats de l'analyse</h3>
+      <div id="fList"></div>
+      <div id="fNotes"></div>
+      <div class="ainfo" id="aInfo"></div>
+    </div>
+    <div class="viewer">
+      <div class="vtools">
+        <button data-plane="axial" class="on">Axial</button><button data-plane="coronal">Coronal</button><button data-plane="sagittal">Sagittal</button>
+        <span class="vsep"></span>
+        <button data-w="lung" class="on">Poumon</button><button data-w="med">Médiastin</button><button data-w="bone">Os</button>
+        <span class="vsep"></span>
+        <button id="tNod" class="on" title="Afficher les nodules">Nodules</button><button id="tLobes" title="Afficher les lobes">Lobes</button>
+        <span class="vsep"></span>
+        <button id="tReset" title="Réinitialiser zoom et fenêtre">Réinit.</button>
+        <span class="grow"></span><span class="sub" style="color:#7F93A6">molette : coupes · clic droit + glisser : fenêtre · Ctrl + molette : zoom · clic milieu : déplacer</span>
+      </div>
+      <div class="vstage" id="stage">
+        <canvas id="cv"></canvas>
+        <div class="ov tl" id="ovTL"></div><div class="ov tr" id="ovTR"></div><div class="ov bl" id="ovBL"></div><div class="ov br" id="ovBR"></div>
+        <div class="ov lft" id="ovL"></div><div class="ov rgt" id="ovR"></div>
+        <div class="vmsg hidden" id="vmsg"></div>
+      </div>
+      <div class="vslider"><span id="sIdx"></span><input type="range" id="slider" min="0" max="0" value="0"></div>
+    </div>
+    <div class="col editor">
+      <label class="f">Indication<textarea id="indication" rows="2" style="min-height:0;font-family:inherit;padding:8px 10px;resize:vertical" placeholder="Renseignements cliniques…"></textarea></label>
+      <div class="erow"><h3 style="flex:1">Compte rendu</h3><span class="ver" id="saveState"></span></div>
+      <div id="signedBox" class="signed-box hidden"></div>
+      <textarea id="report" spellcheck="true"></textarea>
+      <div class="erow">
+        <button id="checkBtn" class="primary">Enregistrer et vérifier</button>
+        <button id="signBtn">Signer</button>
+        <div class="grow"></div>
+        <button id="pdfBtn">PDF</button>
+      </div>
+      <h3 id="issuesTitle">Vérification</h3>
+      <div class="issues" id="issues"></div>
+      <div class="ver" id="versions"></div>
+    </div>
+  </div>
+</template>
+
+<script>
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const STATUS = {received:"Reçu",queued:"En file",analyzing:"Analyse IA",ready:"Prêt à lire",reported:"En cours",signed:"Signé",failed:"Échec"};
+const ROLE = {admin:"Administrateur",radiologist:"Radiologue",secretary:"Secrétariat"};
+const LOBE_COLORS = [null,[230,126,34],[241,196,15],[155,89,182],[52,152,219],[46,204,113]];
+let ME = null, timer = null;
+
+async function api(path, opt = {}) {
+  const o = {...opt, headers: {...(opt.headers || {}), "X-Relecto": "1"}};
+  if (o.body && !(o.body instanceof FormData) && typeof o.body !== "string") { o.body = JSON.stringify(o.body); o.headers["Content-Type"] = "application/json"; }
+  const r = await fetch(path, o);
+  if (r.status === 401 && !path.startsWith("/api/login")) { showAuth(); throw new Error("Non connecté"); }
+  const ct = r.headers.get("content-type") || "";
+  const data = ct.includes("json") ? await r.json() : r;
+  if (!r.ok) { const d = data.detail; const e = new Error(typeof d === "string" ? d : (d && d.message) || r.statusText); e.detail = d; e.status = r.status; throw e; }
+  return data;
+}
+function toast(msg) { const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; document.body.append(t); setTimeout(() => t.remove(), 3500); }
+function badge(s) { return `<span class="badge b-${s}"><span class="dot"></span>${STATUS[s] || s}</span>`; }
+function fmtDate(d) { return d && d.length === 8 ? `${d.slice(6)}/${d.slice(4,6)}/${d.slice(0,4)}` : (d || "—"); }
+
+/* ---------------- auth ---------------- */
+let setupMode = false;
+async function showAuth() {
+  clearInterval(timer);
+  $("#shell").classList.add("hidden"); $("#auth").classList.remove("hidden");
+  setupMode = (await api("/api/setup")).needs_setup;
+  $("#setupFields").classList.toggle("hidden", !setupMode);
+  $("#authTitle").textContent = setupMode ? "Configuration" : "Connexion";
+  $("#aBtn").textContent = setupMode ? "Créer le compte administrateur" : "Se connecter";
+  $("#aPass").autocomplete = setupMode ? "new-password" : "current-password";
+}
+$("#authForm").onsubmit = async e => {
+  e.preventDefault(); $("#aErr").textContent = "";
+  try {
+    if (setupMode) await api("/api/setup", {method: "POST", body: {email: $("#aEmail").value, password: $("#aPass").value, name: $("#aName").value, centre_name: $("#aCentre").value}});
+    else await api("/api/login", {method: "POST", body: {email: $("#aEmail").value, password: $("#aPass").value}});
+    $("#aPass").value = ""; boot();
+  } catch (err) { $("#aErr").textContent = err.message; }
+};
+$("#logoutBtn").onclick = async () => { await api("/api/logout", {method: "POST"}); showAuth(); };
+$("#pwBtn").onclick = () => modal(`<h3 style="margin:0">Changer le mot de passe</h3>
+  <label class="f">Mot de passe actuel<input type="password" id="pw0" autocomplete="current-password"></label>
+  <label class="f">Nouveau (10 caractères min., majuscule et chiffre)<input type="password" id="pw1" autocomplete="new-password"></label>
+  <div class="err" id="pwErr"></div>`, async root => {
+    await api("/api/me/password", {method: "POST", body: {current: $("#pw0", root).value, new: $("#pw1", root).value}}); toast("Mot de passe modifié");
+  });
+
+function modal(html, onOk, okLabel = "Valider") {
+  const bg = document.createElement("div"); bg.className = "modal-bg";
+  bg.innerHTML = `<div class="modal">${html}<div class="erow" style="justify-content:flex-end"><button class="cancel">Annuler</button><button class="primary ok">${okLabel}</button></div></div>`;
+  document.body.append(bg);
+  $(".cancel", bg).onclick = () => bg.remove();
+  $(".ok", bg).onclick = async () => { try { await onOk(bg); bg.remove(); } catch (e) { const er = $(".err", bg); if (er) er.textContent = e.message; else toast(e.message); } };
+  return bg;
+}
+
+async function boot() {
+  const r = await fetch("/api/me", {headers: {"X-Relecto": "1"}});
+  if (!r.ok) return showAuth();
+  ME = await r.json();
+  $("#auth").classList.add("hidden"); $("#shell").classList.remove("hidden");
+  $("#uName").textContent = ME.name; $("#uRole").textContent = ROLE[ME.role];
+  $("#avatar").textContent = ME.name.split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase();
+  $$(".adm").forEach(a => a.classList.toggle("hidden", ME.role !== "admin"));
+  const h = await api("/api/health");
+  $("#aiBadge").className = "badge " + (h.ai_models ? "b-ready" : "b-reported");
+  $("#aiBadge").innerHTML = `<span class="dot"></span>${h.ai_models ? "Modèles IA actifs" : "IA non installée"}`;
+  route();
+}
+window.addEventListener("hashchange", route);
+function route() {
+  clearInterval(timer); viewer && viewer.destroy(); viewer = null;
+  const h = location.hash.replace(/^#/, "") || "/";
+  const m = h.match(/^\/study\/(\w+)/);
+  $$("#nav a[data-r]").forEach(a => a.classList.toggle("on", a.dataset.r === (m ? "worklist" : h === "/stats" ? "stats" : h === "/admin" ? "admin" : "worklist")));
+  $("#page").style.padding = m ? "0" : "20px";
+  if (m) return openStudy(m[1]);
+  if (h === "/stats") return statsPage();
+  if (h === "/admin" && ME.role === "admin") return adminPage();
+  worklist();
+}
+
+/* ---------------- worklist ---------------- */
+let wlFilter = "todo";
+function worklist() {
+  $("#page").innerHTML = ""; $("#page").append($("#tWorklist").content.cloneNode(true));
+  $$("#tabs button").forEach(b => { b.classList.toggle("on", b.dataset.s === wlFilter); b.onclick = () => { wlFilter = b.dataset.s; $$("#tabs button").forEach(x => x.classList.toggle("on", x === b)); loadWl(); }; });
+  let qt; $("#q").oninput = () => { clearTimeout(qt); qt = setTimeout(loadWl, 250); };
+  const drop = $("#drop");
+  $("#pick").onclick = () => $("#file").click();
+  $("#file").onchange = () => $("#file").files[0] && upload($("#file").files[0]);
+  drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); };
+  drop.ondragleave = () => drop.classList.remove("over");
+  drop.ondrop = e => { e.preventDefault(); drop.classList.remove("over"); const f = e.dataTransfer.files[0]; f && upload(f); };
+  loadWl(); timer = setInterval(loadWl, 4000);
+}
+function upload(file) {
+  if (!file.name.toLowerCase().endsWith(".zip")) return toast("Envoyez un fichier .zip");
+  const fd = new FormData(); fd.append("file", file);
+  const xhr = new XMLHttpRequest(); const prog = $("#upProg");
+  prog.classList.remove("hidden");
+  xhr.upload.onprogress = e => { prog.firstElementChild.style.width = (100 * e.loaded / e.total) + "%"; };
+  xhr.onload = () => { prog.classList.add("hidden"); if (xhr.status < 300) { toast("Examen reçu, analyse en file d'attente"); loadWl(); } else { try { toast(JSON.parse(xhr.responseText).detail); } catch { toast("Échec de l'envoi"); } } };
+  xhr.open("POST", "/api/studies/upload"); xhr.setRequestHeader("X-Relecto", "1"); xhr.send(fd);
+}
+async function loadWl() {
+  if (!$("#rows")) return;
+  const p = new URLSearchParams();
+  if (wlFilter === "mine") p.set("mine", "true"); else if (wlFilter) p.set("status", wlFilter);
+  if ($("#q").value.trim()) p.set("q", $("#q").value.trim());
+  const d = await api("/api/studies?" + p);
+  const c = d.counts, todo = ["received","queued","analyzing","ready","reported","failed"].reduce((a, k) => a + (c[k] || 0), 0);
+  const ns = $$("#tabs .n"); ns[0].textContent = todo || ""; ns[1].textContent = c.ready || ""; ns[2].textContent = c.signed || "";
+  $("#wlEmpty").classList.toggle("hidden", d.studies.length > 0);
+  $("#rows").innerHTML = d.studies.map(s => `<tr class="row" data-id="${s.id}">
+    <td style="width:70px">${s.priority === "urgent" ? '<span class="badge b-urgent">URGENT</span>' : ""}</td>
+    <td><div class="pt">${esc(s.patient_name) || "—"}</div><div class="sub">${esc(s.patient_id)} ${s.accession ? "· " + esc(s.accession) : ""}</div></td>
+    <td>${esc(s.description || s.modality)}<div class="sub">${s.n_images} images · ${esc(s.source)}</div></td>
+    <td>${fmtDate(s.study_date)}</td>
+    <td>${badge(s.status)}${s.job && ["queued","running"].includes(s.job.status) ? `<div class="sub">${esc(s.job.progress || "")}</div>` : ""}</td>
+    <td>${s.modality !== "CT" ? '<span class="muted">manuel</span>' : ["ready","reported","signed"].includes(s.status) ? (s.n_findings ? `<b>${s.n_findings}</b> nodule(s)` : '<span class="muted">aucun</span>') : ""}</td>
+    <td>${esc(s.signed_by || s.assigned_name || "")}</td></tr>`).join("");
+  $$("#rows tr").forEach(tr => tr.onclick = () => location.hash = "#/study/" + tr.dataset.id);
+}
+
+/* ---------------- viewer ---------------- */
+let viewer = null;
+const WINDOWS = {lung: [-600, 1500], med: [40, 400], bone: [400, 1800]};
+class Viewer {
+  constructor(study) {
+    this.id = study.id; this.meta = null; this.plane = "axial"; this.idx = {axial: 0, coronal: 0, sagittal: 0};
+    this.wl = [...WINDOWS.lung]; this.zoom = 1; this.pan = [0, 0]; this.showNod = true; this.showLobes = false;
+    this.cache = new Map(); this.cross = null; this.cv = $("#cv"); this.ctx = this.cv.getContext("2d"); this.stage = $("#stage");
+    this.alive = true; this.bind();
+  }
+  destroy() { this.alive = false; window.removeEventListener("resize", this._rs); }
+  async init() {
+    try { this.meta = await api(`/api/studies/${this.id}/volume`); }
+    catch (e) { this.msg(e.message); return false; }
+    const [K, I, J] = this.meta.shape; this.idx = {axial: Math.floor(K / 2), coronal: Math.floor(I / 2), sagittal: Math.floor(J / 2)};
+    $("#tLobes").classList.toggle("hidden", !this.meta.has_lobes);
+    this.msg(null); this.setPlane("axial"); return true;
+  }
+  msg(t) { const m = $("#vmsg"); m.classList.toggle("hidden", !t); if (t) m.innerHTML = t; }
+  n(plane = this.plane) { const [K, I, J] = this.meta.shape; return {axial: K, coronal: I, sagittal: J}[plane]; }
+  setPlane(p) {
+    this.plane = p; $$(".vtools [data-plane]").forEach(b => b.classList.toggle("on", b.dataset.plane === p));
+    const s = $("#slider"); s.max = this.n() - 1; s.value = this.idx[p]; this.fit(); this.draw(); this.prefetch();
+  }
+  aspect() { // physical mm per displayed pixel (x, y)
+    const [ds, dr, dc] = this.meta.spacing_mm;
+    return {axial: [dc, dr], coronal: [dc, ds], sagittal: [dr, ds]}[this.plane];
+  }
+  dims() { const [K, I, J] = this.meta.shape; return {axial: [J, I], coronal: [J, K], sagittal: [I, K]}[this.plane]; }
+  fit() {
+    const [w, h] = this.dims(), [ax, ay] = this.aspect(), W = this.stage.clientWidth, H = this.stage.clientHeight;
+    this.base = Math.min(W / (w * ax), H / (h * ay)); this.zoom = 1; this.pan = [0, 0]; this.layout();
+  }
+  layout() {
+    const [w, h] = this.dims(), [ax, ay] = this.aspect(), s = this.base * this.zoom;
+    const W = this.stage.clientWidth, H = this.stage.clientHeight;
+    this.sx = s * ax; this.sy = s * ay;
+    this.ox = (W - w * this.sx) / 2 + this.pan[0]; this.oy = (H - h * this.sy) / 2 + this.pan[1];
+    this.cv.width = w; this.cv.height = h;
+    this.cv.style.transform = `translate(${this.ox}px,${this.oy}px) scale(${this.sx},${this.sy})`;
+  }
+  flip() { return this.meta.flip_lr && this.plane !== "sagittal"; }
+  async get(plane, idx, layer = "volume") {
+    const key = `${layer}/${plane}/${idx}`;
+    if (this.cache.has(key)) return this.cache.get(key);
+    const p = fetch(`/api/studies/${this.id}/slice/${plane}/${idx}?layer=${layer}`, {headers: {"X-Relecto": "1"}}).then(async r => {
+      if (!r.ok) throw new Error("slice"); const [h, w] = r.headers.get("X-Shape").split(",").map(Number);
+      const b = await r.arrayBuffer(); return {w, h, d: layer === "volume" ? new Int16Array(b) : new Uint8Array(b)};
+    });
+    this.cache.set(key, p); if (this.cache.size > 1200) this.cache.delete(this.cache.keys().next().value);
+    p.catch(() => this.cache.delete(key)); return p;
+  }
+  prefetch() {
+    const i = this.idx[this.plane], n = this.n();
+    for (let d = 1; d <= 12; d++) for (const k of [i + d, i - d]) if (k >= 0 && k < n) { this.get(this.plane, k); if (this.showNod) this.get(this.plane, k, "nodules"); }
+  }
+  async draw() {
+    if (!this.meta || !this.alive) return;
+    const plane = this.plane, idx = this.idx[plane], token = (this._tok = (this._tok || 0) + 1);
+    const jobs = [this.get(plane, idx), this.showNod ? this.get(plane, idx, "nodules") : null, this.showLobes ? this.get(plane, idx, "lobes") : null];
+    let im, nod, lob; try { [im, nod, lob] = await Promise.all(jobs); } catch { return; }
+    if (token !== this._tok) return;
+    const {w, h, d} = im, [L, Wd] = this.wl, lo = L - Wd / 2, sc = 255 / Wd, flip = this.flip();
+    if (this.cv.width !== w || this.cv.height !== h) this.layout();
+    const img = this.ctx.createImageData(w, h), px = img.data;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const src = y * w + (flip ? w - 1 - x : x), o = (y * w + x) * 4;
+      let v = (d[src] - lo) * sc; v = v < 0 ? 0 : v > 255 ? 255 : v;
+      let r = v, g = v, b = v;
+      if (lob) { const c = LOBE_COLORS[lob.d[src]]; if (c) { r = r * .72 + c[0] * .28; g = g * .72 + c[1] * .28; b = b * .72 + c[2] * .28; } }
+      if (nod && nod.d[src]) {
+        const l = nod.d[src], edge = (x > 0 && nod.d[y * w + (flip ? w - x : x - 1)] !== l) || (x < w - 1 && nod.d[y * w + (flip ? w - 2 - x : x + 1)] !== l) ||
+          (y > 0 && nod.d[src - w] !== l) || (y < h - 1 && nod.d[src + w] !== l);
+        if (edge) { r = 46; g = 230; b = 210; } else { r = r * .7 + 46 * .3; g = g * .7 + 196 * .3; b = b * .7 + 182 * .3; }
+      }
+      px[o] = r; px[o + 1] = g; px[o + 2] = b; px[o + 3] = 255;
+    }
+    this.ctx.putImageData(img, 0, 0);
+    if (this.cross) this.drawCross();
+    const name = {axial: "Axial", coronal: "Coronal", sagittal: "Sagittal"}[plane];
+    $("#sIdx").textContent = `${name} ${idx + 1}/${this.n()}`; $("#slider").value = idx;
+    $("#ovTL").textContent = `${name}  ${idx + 1}/${this.n()}`;
+    $("#ovTR").textContent = `F ${Math.round(L)} / L ${Math.round(Wd)}`;
+    $("#ovBL").textContent = `Zoom ${(this.zoom * 100).toFixed(0)} %`;
+    $("#ovBR").textContent = this.meta.spacing_mm.map(v => v.toFixed(2)).join(" × ") + " mm";
+    const sag = plane === "sagittal"; $("#ovL").textContent = sag ? "A" : "R"; $("#ovR").textContent = sag ? "P" : "L";
+  }
+  toVol(px, py) { // display pixel -> volume index (k,i,j)
+    const [K] = this.meta.shape, x = this.flip() ? this.dims()[0] - 1 - px : px, up = this.meta.k_superior;
+    const kk = y => up ? K - 1 - y : y;
+    if (this.plane === "axial") return [this.idx.axial, py, x];
+    if (this.plane === "coronal") return [kk(py), this.idx.coronal, x];
+    return [kk(py), x, this.idx.sagittal];
+  }
+  toDisp(k, i, j) {
+    const [K] = this.meta.shape, up = this.meta.k_superior, ky = up ? K - 1 - k : k, W = this.dims()[0];
+    let x, y;
+    if (this.plane === "axial") [x, y] = [j, i]; else if (this.plane === "coronal") [x, y] = [j, ky]; else [x, y] = [i, ky];
+    if (this.flip()) x = W - 1 - x; return [x, y];
+  }
+  drawCross() {
+    const [x, y] = this.toDisp(...this.cross), c = this.ctx; c.save(); c.strokeStyle = "rgba(255,210,63,.75)"; c.lineWidth = 1 / Math.max(this.sx, 1);
+    const g = 6; c.beginPath(); c.moveTo(x - 24, y); c.lineTo(x - g, y); c.moveTo(x + g, y); c.lineTo(x + 24, y); c.moveTo(x, y - 24); c.lineTo(x, y - g); c.moveTo(x, y + g); c.lineTo(x, y + 24); c.stroke(); c.restore();
+  }
+  goto(k, i, j) {
+    k = Math.round(k); i = Math.round(i); j = Math.round(j);
+    this.idx = {axial: k, coronal: i, sagittal: j}; this.cross = [k, i, j];
+    $("#slider").value = this.idx[this.plane]; this.draw(); this.prefetch();
+  }
+  scroll(d) { const n = this.n(), p = this.plane; this.idx[p] = Math.max(0, Math.min(n - 1, this.idx[p] + d)); this.draw(); this.prefetch(); }
+  bind() {
+    const st = this.stage; let drag = null;
+    st.addEventListener("wheel", e => { e.preventDefault(); if (!this.meta) return;
+      if (e.ctrlKey || e.metaKey) { const f = e.deltaY < 0 ? 1.12 : 1 / 1.12; this.zoom = Math.max(.5, Math.min(12, this.zoom * f)); this.layout(); this.draw(); }
+      else this.scroll(e.deltaY > 0 ? 1 : -1); }, {passive: false});
+    st.addEventListener("contextmenu", e => e.preventDefault());
+    st.addEventListener("pointerdown", e => { if (!this.meta) return; st.setPointerCapture(e.pointerId);
+      drag = {b: e.button, x: e.clientX, y: e.clientY, wl: [...this.wl], pan: [...this.pan], moved: false}; });
+    st.addEventListener("pointermove", e => { if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+      if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
+      if (drag.b === 2) { this.wl = [drag.wl[0] + dy * 2, Math.max(1, drag.wl[1] + dx * 4)]; $$(".vtools [data-w]").forEach(b => b.classList.remove("on")); this.draw(); }
+      else if (drag.b === 1 || (drag.b === 0 && e.shiftKey)) { this.pan = [drag.pan[0] + dx, drag.pan[1] + dy]; this.layout(); this.draw(); }
+      else if (drag.b === 0 && drag.moved) { this.scroll(Math.sign(dy) * (Math.abs(dy) > 6 ? 1 : 0)); drag.y = e.clientY; } });
+    st.addEventListener("pointerup", e => { if (drag && drag.b === 0 && !drag.moved && !e.shiftKey) {
+        const r = st.getBoundingClientRect(), px = Math.floor((e.clientX - r.left - this.ox) / this.sx), py = Math.floor((e.clientY - r.top - this.oy) / this.sy);
+        const [w, h] = this.dims(); if (px >= 0 && py >= 0 && px < w && py < h) { const [k, i, j] = this.toVol(px, py); this.idx = {axial: k, coronal: i, sagittal: j}; this.cross = [k, i, j]; this.draw(); } }
+      drag = null; });
+    $("#slider").oninput = e => { this.idx[this.plane] = +e.target.value; this.draw(); this.prefetch(); };
+    $$(".vtools [data-plane]").forEach(b => b.onclick = () => this.setPlane(b.dataset.plane));
+    $$(".vtools [data-w]").forEach(b => b.onclick = () => { this.wl = [...WINDOWS[b.dataset.w]]; $$(".vtools [data-w]").forEach(x => x.classList.toggle("on", x === b)); this.draw(); });
+    $("#tNod").onclick = () => { this.showNod = !this.showNod; $("#tNod").classList.toggle("on", this.showNod); this.draw(); };
+    $("#tLobes").onclick = () => { this.showLobes = !this.showLobes; $("#tLobes").classList.toggle("on", this.showLobes); this.draw(); };
+    $("#tReset").onclick = () => { this.wl = [...WINDOWS.lung]; $$(".vtools [data-w]").forEach(x => x.classList.toggle("on", x.dataset.w === "lung")); this.fit(); this.draw(); };
+    this._rs = () => { if (this.meta) { this.layout(); this.draw(); } }; window.addEventListener("resize", this._rs);
+    this._keys = e => { if (!this.alive || ["TEXTAREA","INPUT","SELECT"].includes(document.activeElement.tagName)) return;
+      if (e.key === "ArrowUp" || e.key === "PageUp") { this.scroll(-1); e.preventDefault(); }
+      if (e.key === "ArrowDown" || e.key === "PageDown") { this.scroll(1); e.preventDefault(); }
+      if (e.key === "1") $$(".vtools [data-w]")[0].click(); if (e.key === "2") $$(".vtools [data-w]")[1].click(); if (e.key === "3") $$(".vtools [data-w]")[2].click(); };
+    document.addEventListener("keydown", this._keys);
+  }
+}
+
+/* ---------------- study page ---------------- */
+let S = null, lastCheck = null, dirty = false;
+async function openStudy(id) {
+  $("#page").innerHTML = ""; $("#page").append($("#tStudy").content.cloneNode(true));
+  $("#back").onclick = () => location.hash = "#/";
+  await loadStudy(id, true);
+  timer = setInterval(async () => { if (S && ["queued","analyzing","received"].includes(S.status)) await loadStudy(id, false); }, 3000);
+}
+async function loadStudy(id, first) {
+  const prev = S && S.status; S = await api(`/api/studies/${id}`);
+  const canEdit = ["admin","radiologist"].includes(ME.role), signed = S.report && S.report.status === "signed";
+  $("#pName").textContent = S.patient_name || "—"; $("#pId").textContent = S.patient_id || "—"; $("#pBirth").textContent = fmtDate(S.patient_birth_date);
+  $("#pDesc").textContent = S.description || S.modality || "—"; $("#pDate").textContent = fmtDate(S.study_date); $("#pAcc").textContent = S.accession || "—";
+  $("#pStatus").innerHTML = badge(S.status) + (S.jobs.length && ["queued","running"].includes(S.jobs.at(-1).status) ? ` <span class="sub"><span class="spin">◌</span> ${esc(S.jobs.at(-1).progress || "")}</span>` : "");
+  $("#pPrio").innerHTML = S.priority === "urgent" ? '<span class="badge b-urgent">URGENT</span>' : "";
+  $("#urgentBtn").textContent = S.priority === "urgent" ? "Retirer l'urgence" : "Marquer urgent";
+  $("#urgentBtn").onclick = async () => { await api(`/api/studies/${id}`, {method: "PATCH", body: {priority: S.priority === "urgent" ? "routine" : "urgent"}}); loadStudy(id); };
+  $("#reanalyze").classList.toggle("hidden", !canEdit || signed);
+  $("#reanalyze").onclick = async () => { try { await api(`/api/studies/${id}/analyze`, {method: "POST"}); toast("Analyse relancée"); loadStudy(id); } catch (e) { toast(e.message); } };
+  if (first) {
+    const rads = await api("/api/radiologists");
+    $("#assign").innerHTML = `<option value="">—</option>` + rads.map(r => `<option value="${r.id}">${esc((r.title ? r.title + " " : "") + r.name)}</option>`).join("");
+    $("#assign").onchange = () => api(`/api/studies/${id}`, {method: "PATCH", body: {assigned_to: $("#assign").value}});
+    $("#indication").onchange = () => api(`/api/studies/${id}`, {method: "PATCH", body: {indication: $("#indication").value}}).then(() => toast("Indication enregistrée"));
+  }
+  $("#assign").value = S.assigned_to || "";
+  if (first || document.activeElement !== $("#indication")) $("#indication").value = S.indication || "";
+  $("#indication").readOnly = signed;
+
+  // findings
+  const fl = $("#fList");
+  if (["queued","analyzing","received"].includes(S.status)) fl.innerHTML = `<div class="muted"><span class="spin">◌</span> Analyse en cours…</div>`;
+  else if (S.status === "failed") fl.innerHTML = `<div class="note">L'analyse a échoué : ${esc((S.jobs.at(-1) || {}).error || "")}</div>`;
+  else if (!S.findings.length) fl.innerHTML = `<div class="muted">Aucun nodule détecté par l'analyse automatique.</div>`;
+  else fl.innerHTML = S.findings.map(f => `<div class="fcard ${f.status}" data-id="${f.id}">
+      <div class="t"><span>${esc(f.label)} · ${f.long_axis_mm >= 30 ? "Masse" : "Nodule"}</span><span class="sub st-${f.status}">${{proposed:"proposé",confirmed:"confirmé",rejected:"rejeté"}[f.status]}</span></div>
+      <div><b>${fmt(f.long_axis_mm)} × ${fmt(f.short_axis_mm)} mm</b> · ${Math.round(f.volume_mm3)} mm³</div>
+      <div class="m">${esc(f.lobe || `tiers ${f.zone} du poumon ${f.side === "R" ? "droit" : "gauche"}`)} · ${Math.round(f.mean_hu)} UH · coupe ${f.key_slice + 1}</div>
+      <div class="m">${f.source.startsWith("reference") ? `Contours de référence (${f.readers} lecteur(s))` : "IA : " + esc(f.source)}</div>
+      ${canEdit && !signed ? `<div class="acts"><button class="sm" data-a="confirmed">Confirmer</button><button class="sm danger" data-a="rejected">Rejeter</button>${f.status !== "proposed" ? '<button class="sm ghost" data-a="proposed">Annuler</button>' : ""}</div>` : ""}
+    </div>`).join("");
+  $$(".fcard", fl).forEach(c => {
+    c.onclick = e => { if (e.target.dataset.a) return; const f = S.findings.find(x => x.id === c.dataset.id); $$(".fcard").forEach(x => x.classList.toggle("sel", x === c));
+      if (viewer && viewer.meta && f.centroid_vox) { if (viewer.plane !== "axial") viewer.setPlane("axial"); viewer.goto(f.key_slice, f.centroid_vox[1], f.centroid_vox[2]); } };
+    $$("[data-a]", c).forEach(b => b.onclick = async () => { await api(`/api/findings/${c.dataset.id}/decision`, {method: "POST", body: {status: b.dataset.a}}); await loadStudy(id); if ($("#report").value) runCheck(false); });
+  });
+  const a = S.analysis || {};
+  $("#fNotes").innerHTML = (a.notes || []).map(n => `<div class="note">${esc(n)}</div>`).join("") + (a.qc || []).map(q => `<div class="note">Contrôle qualité : ${esc(q)}</div>`).join("");
+  $("#aInfo").innerHTML = a.source ? `Source : <b>${a.source === "ai" ? "modèles d'IA" : a.source === "reference" ? "contours de référence" : "aucune"}</b> · ${a.seconds} s<br>${Object.entries(a.versions || {}).filter(([k]) => !k.startsWith("checker")).map(([k, v]) => `${esc(k)} ${esc(v)}`).join(" · ")}` : "";
+
+  // viewer
+  if (["ready","reported","signed"].includes(S.status) && (first || !viewer || !viewer.meta)) {
+    viewer && viewer.destroy(); viewer = new Viewer(S); await viewer.init();
+  } else if (!viewer || !viewer.meta) {
+    if (!viewer) viewer = new Viewer(S);
+    viewer.msg(S.status === "failed" ? "Analyse impossible pour cet examen." : `<div class="spin" style="font-size:22px">◌</div><div>${esc((S.jobs.at(-1) || {}).progress || "En attente d'analyse")}</div>`);
+  }
+
+  // report
+  const ta = $("#report");
+  if (S.report && (first || !dirty)) { ta.value = S.report.text; dirty = false; }
+  ta.readOnly = signed || !canEdit;
+  ta.oninput = () => { dirty = true; $("#saveState").textContent = "modifié — non enregistré"; };
+  $("#checkBtn").classList.toggle("hidden", signed || !canEdit);
+  $("#signBtn").classList.toggle("hidden", signed || ME.role !== "radiologist");
+  $("#checkBtn").disabled = !S.report && !ta.value; $("#signBtn").disabled = !S.report;
+  $("#checkBtn").onclick = () => runCheck(true);
+  $("#signBtn").onclick = () => sign(false);
+  $("#pdfBtn").disabled = !S.report;
+  $("#pdfBtn").onclick = () => window.open(`/api/studies/${id}/report.pdf`, "_blank");
+  $("#signedBox").classList.toggle("hidden", !signed);
+  if (signed) $("#signedBox").innerHTML = `Signé par <b>${esc(S.report.signed_by)}</b> le ${new Date(S.report.signed_at).toLocaleString("fr-FR")}. Le compte rendu est verrouillé.`;
+  if (S.report && S.report.check && (first || !lastCheck)) renderIssues(S.report.check.issues, S.report.check.versions);
+  if (S.report && !dirty) $("#saveState").textContent = S.report.updated_at ? "enregistré " + new Date(S.report.updated_at).toLocaleTimeString("fr-FR", {hour: "2-digit", minute: "2-digit"}) : "";
+}
+const fmt = x => x >= 10 ? Math.round(x) : String(Math.round(x * 10) / 10).replace(".", ",");
+
+async function runCheck(announce) {
+  try {
+    const r = await api(`/api/studies/${S.id}/report`, {method: "PUT", body: {text: $("#report").value}});
+    lastCheck = r; dirty = false; $("#saveState").textContent = "enregistré " + new Date().toLocaleTimeString("fr-FR", {hour: "2-digit", minute: "2-digit"});
+    renderIssues(r.issues, r.versions); if (announce) toast(r.issues.length ? `${r.issues.length} point(s) à vérifier` : "Aucun problème détecté");
+    S.report = S.report || {}; S.report.id = r.report_id;
+  } catch (e) { toast(e.message); }
+}
+function renderIssues(issues, versions) {
+  const box = $("#issues"), canFix = !$("#report").readOnly;
+  $("#issuesTitle").textContent = `Vérification · ${issues.length ? issues.length + " point(s)" : "aucun problème"}`;
+  box.innerHTML = issues.map((i, n) => `<div class="issue ${i.severity}"><div class="h"><span>${esc(i.title)}</span><span class="sev ${i.severity}">${{critical:"CRITIQUE",warning:"ATTENTION",info:"INFO"}[i.severity]} · ${esc(i.rule_id)}</span></div>
+      ${(i.evidence || []).map(e => `<div class="ev">« ${esc(e.text)} »</div>`).join("")}
+      <div>${esc(i.message)}</div>
+      ${i.suggestion && canFix ? `<div class="s"><span class="sub">${i.suggestion.mode === "replace" ? `« ${esc(i.suggestion.original)} » → « ${esc(i.suggestion.replacement)} »` : `Ajouter : « ${esc(i.suggestion.replacement)} »`}</span>
+        <button class="sm primary" data-n="${n}" data-d="accepted">Appliquer</button><button class="sm" data-n="${n}" data-d="rejected">Ignorer</button></div>`
+       : canFix ? `<div class="s"><button class="sm" data-n="${n}" data-d="rejected">Ignorer</button></div>` : ""}</div>`).join("");
+  $$("button[data-n]", box).forEach(b => b.onclick = async () => {
+    const i = issues[+b.dataset.n];
+    if (b.dataset.d === "accepted") { const r = await api("/api/apply", {method: "POST", body: {text: $("#report").value, suggestion: i.suggestion}}); $("#report").value = r.text; }
+    if (S.report && S.report.id) api("/api/decision", {method: "POST", body: {report_id: S.report.id, check_id: lastCheck && lastCheck.check_id, rule_id: i.rule_id, decision: b.dataset.d}});
+    if (b.dataset.d === "accepted") runCheck(false); else b.closest(".issue").remove();
+  });
+  $("#versions").textContent = versions ? `Moteur ${versions.engine || ""} · règles ${versions.rule_pack || ""} · lexique ${versions.lexicon || ""}` : "";
+}
+async function sign(ack) {
+  const text = $("#report").value;
+  const go = async ack => {
+    try { await api(`/api/studies/${S.id}/report/sign`, {method: "POST", body: {text, acknowledge_critical: ack}}); dirty = false; toast("Compte rendu signé"); loadStudy(S.id); }
+    catch (e) {
+      if (e.status === 409 && e.detail && e.detail.issues) {
+        modal(`<h3 style="margin:0">Points critiques non résolus</h3>${e.detail.issues.map(i => `<div class="issue critical"><b>${esc(i.title)}</b><div>${esc(i.message)}</div></div>`).join("")}
+          <div class="muted">Signer quand même ? Votre décision sera enregistrée.</div>`, () => go(true), "Signer quand même");
+      } else toast(e.message);
+    }
+  };
+  modal(`<h3 style="margin:0">Signer le compte rendu</h3><div>Vous confirmez avoir relu les images et le texte. Une fois signé, le compte rendu ne peut plus être modifié.</div>`, () => go(false), "Signer");
+}
+
+/* ---------------- stats ---------------- */
+async function statsPage() {
+  const s = await api("/api/stats");
+  const f = s.findings || {}, tot = (f.confirmed || 0) + (f.rejected || 0);
+  $("#page").innerHTML = `<h2 style="margin:0 0 14px">Qualité et activité</h2><div class="grid">
+    <div class="card stat"><div class="l">Comptes rendus signés</div><div class="v">${s.signed_reports}</div></div>
+    <div class="card stat"><div class="l">Délai médian réception → signature</div><div class="v">${s.median_turnaround_min != null ? s.median_turnaround_min + " min" : "—"}</div></div>
+    <div class="card stat"><div class="l">Résultats IA confirmés</div><div class="v">${tot ? Math.round(100 * (f.confirmed || 0) / tot) + " %" : "—"}</div><div class="sub">${f.confirmed || 0} confirmés · ${f.rejected || 0} rejetés · ${f.proposed || 0} sans décision</div></div>
+    <div class="card stat"><div class="l">Brouillons modifiés avant signature</div><div class="v">${s.signed_reports ? Math.round(100 * s.drafts_edited / s.signed_reports) + " %" : "—"}</div></div></div>
+    <div class="section"><h2>Suggestions du vérificateur</h2><div class="card"><table><thead><tr><th>Règle</th><th>Acceptées</th><th>Ignorées</th><th>Taux d'acceptation</th></tr></thead><tbody>
+    ${Object.entries(s.rules).map(([r, d]) => `<tr><td><b>${esc(r)}</b></td><td>${d.accepted}</td><td>${d.rejected}</td><td>${d.acceptance != null ? Math.round(d.acceptance * 100) + " %" : "—"}</td></tr>`).join("") || '<tr><td colspan="4" class="muted">Pas encore de décisions.</td></tr>'}
+    </tbody></table></div></div>`;
+}
+
+/* ---------------- admin ---------------- */
+async function adminPage() {
+  const [users, st, log] = await Promise.all([api("/api/users"), api("/api/settings"), api("/api/audit?limit=100")]);
+  $("#page").innerHTML = `<h2 style="margin:0 0 14px">Administration</h2>
+  <div class="section"><h2>Centre</h2><div class="card form">
+    <label class="f">Nom du centre<input id="sName" value="${esc(st.centre_name)}" style="width:260px"></label>
+    <label class="f">Adresse<input id="sAddr" value="${esc(st.centre_address)}" style="width:300px"></label>
+    <label class="f">Téléphone<input id="sTel" value="${esc(st.centre_phone)}"></label>
+    <label class="f">Pied de page du compte rendu<input id="sFoot" value="${esc(st.report_footer)}" style="width:300px"></label>
+    <button class="primary" id="sSave">Enregistrer</button></div></div>
+  <div class="section"><h2>Utilisateurs</h2><div class="card"><table><thead><tr><th>Nom</th><th>Email</th><th>Rôle</th><th>Dernière connexion</th><th>Statut</th><th></th></tr></thead><tbody>
+    ${users.map(u => `<tr data-id="${u.id}"><td><b>${esc((u.title ? u.title + " " : "") + u.name)}</b></td><td>${esc(u.email)}</td>
+      <td><select data-f="role">${Object.entries(ROLE).map(([k, v]) => `<option value="${k}" ${k === u.role ? "selected" : ""}>${v}</option>`).join("")}</select></td>
+      <td class="sub">${u.last_login_at ? new Date(u.last_login_at).toLocaleString("fr-FR") : "jamais"}</td>
+      <td>${u.active ? '<span class="badge b-signed">actif</span>' : '<span class="badge b-failed">désactivé</span>'}</td>
+      <td style="text-align:right"><button class="sm" data-act="pw">Nouveau mot de passe</button> <button class="sm ${u.active ? "danger" : ""}" data-act="toggle">${u.active ? "Désactiver" : "Réactiver"}</button></td></tr>`).join("")}
+    </tbody></table>
+    <div class="form" style="border-top:1px solid var(--line)">
+      <label class="f">Titre<input id="nTitle" placeholder="Dr" style="width:70px"></label>
+      <label class="f">Nom<input id="nName"></label><label class="f">Email<input id="nEmail" type="email"></label>
+      <label class="f">Rôle<select id="nRole">${Object.entries(ROLE).map(([k, v]) => `<option value="${k}" ${k === "radiologist" ? "selected" : ""}>${v}</option>`).join("")}</select></label>
+      <label class="f">Mot de passe initial<input id="nPw" type="password" autocomplete="new-password"></label>
+      <button class="primary" id="nAdd">Ajouter</button></div></div></div>
+  <div class="section"><h2>Journal d'audit (100 derniers événements)</h2><div class="card"><table><thead><tr><th>Date</th><th>Utilisateur</th><th>Action</th><th>Objet</th><th>Détails</th></tr></thead><tbody>
+    ${log.map(e => `<tr><td class="sub">${new Date(e.ts).toLocaleString("fr-FR")}</td><td>${esc(e.user || "système")}</td><td><b>${esc(e.action)}</b></td><td class="sub">${esc(e.object_type || "")} ${esc((e.object_id || "").slice(0, 8))}</td><td class="sub">${esc(JSON.stringify(e.details || {})).slice(0, 140)}</td></tr>`).join("")}
+    </tbody></table></div></div>`;
+  $("#sSave").onclick = async () => { await api("/api/settings", {method: "PUT", body: {centre_name: $("#sName").value, centre_address: $("#sAddr").value, centre_phone: $("#sTel").value, report_footer: $("#sFoot").value}}); toast("Enregistré"); };
+  $("#nAdd").onclick = async () => { try { await api("/api/users", {method: "POST", body: {title: $("#nTitle").value || null, name: $("#nName").value, email: $("#nEmail").value, role: $("#nRole").value, password: $("#nPw").value}}); toast("Compte créé"); adminPage(); } catch (e) { toast(e.message); } };
+  $$("tr[data-id]").forEach(tr => {
+    const id = tr.dataset.id, u = users.find(x => x.id === id);
+    $("select[data-f=role]", tr).onchange = async e => { try { await api(`/api/users/${id}`, {method: "PATCH", body: {role: e.target.value}}); toast("Rôle modifié"); } catch (er) { toast(er.message); adminPage(); } };
+    $("[data-act=toggle]", tr).onclick = async () => { try { await api(`/api/users/${id}`, {method: "PATCH", body: {active: !u.active}}); adminPage(); } catch (e) { toast(e.message); } };
+    $("[data-act=pw]", tr).onclick = () => modal(`<h3 style="margin:0">Nouveau mot de passe pour ${esc(u.name)}</h3><label class="f">Mot de passe<input type="password" id="rp" autocomplete="new-password"></label><div class="err"></div>`,
+      async root => { await api(`/api/users/${id}`, {method: "PATCH", body: {password: $("#rp", root).value}}); toast("Mot de passe modifié"); });
+  });
+}
+
+boot().catch(() => showAuth());
+</script>
+</body>
+</html>

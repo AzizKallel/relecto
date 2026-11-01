@@ -36,4 +36,4 @@ jobs:
       - name: Quality gate on the golden set
         run: python -m relecto gate
       - name: Docker image builds
-        run: docker build -t relecto:ci .
+        run: docker build --build-arg WITH_AI=0 -t relecto:ci .

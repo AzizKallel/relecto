@@ -7,11 +7,13 @@ from relecto.api.app import app
 from relecto.db import AuditEvent, Decision, Report, migrate, session_scope
 
 migrate()
+from tests.auth_helpers import client  # noqa: E402
 
 
 class TestAPI(unittest.TestCase):
-    def setUp(self):
-        self.c = TestClient(app)
+    @classmethod
+    def setUpClass(cls):
+        cls.c = client("radiologist")
 
     def test_health_reports_versions(self):
         r = self.c.get("/api/health").json()
@@ -20,6 +22,17 @@ class TestAPI(unittest.TestCase):
 
     def test_page_served(self):
         self.assertIn("Relecto", self.c.get("/").text)
+        self.assertIn("Relecto", self.c.get("/checker").text)
+
+    def test_login_required(self):
+        anon = TestClient(app)
+        anon.headers.update({"X-Relecto": "1"})
+        self.assertEqual(anon.post("/api/check", json={"text": DEMO}).status_code, 401)
+        self.assertEqual(anon.get("/api/studies").status_code, 401)
+
+    def test_csrf_header_required(self):
+        r = TestClient(app, cookies=self.c.cookies).post("/api/check", json={"text": DEMO})
+        self.assertEqual(r.status_code, 403)
 
     def test_check_deidentifies_stores_and_audits(self):
         r = self.c.post("/api/check", json={"text": "Patient : BEN SALAH Mohamed\n" + DEMO, "exam": "ct_chest"}).json()
@@ -52,7 +65,7 @@ class TestAPI(unittest.TestCase):
         with session_scope() as s:
             d = s.query(Decision).filter_by(report_id=r["report_id"]).one()
             self.assertEqual(d.versions, r["versions"])
-        self.assertGreaterEqual(self.c.get("/api/stats").json()["LAT-001"]["accepted"], 1)
+        self.assertGreaterEqual(self.c.get("/api/stats").json()["rules"]["LAT-001"]["accepted"], 1)
 
     def test_sign_locks_report(self):
         r = self.c.post("/api/check", json={"text": DEMO, "exam": "ct_chest"}).json()

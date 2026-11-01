@@ -96,7 +96,34 @@ class TestDraftAndChecks(unittest.TestCase):
 
     def test_wrong_side_written_by_radiologist_is_flagged(self):
         d = draft_ct_chest(self.ct, [self.f]).replace("du poumon gauche", "du poumon droit")
+        issues = image_vs_report(d, [self.f])
+        self.assertEqual({i.rule_id for i in issues}, {"IMG-002"})
+        self.assertEqual(issues[0].severity, "critical")
+        from relecto.checker import apply_suggestion
+        fixed = d
+        for i in sorted(issues, key=lambda i: -i.suggestion.start):
+            fixed = apply_suggestion(fixed, i)
+        self.assertEqual(fixed, draft_ct_chest(self.ct, [self.f]))
+        self.assertEqual(image_vs_report(fixed, [self.f]), [])
+
+    def test_text_fix_never_contradicts_the_image(self):
+        from relecto.checker import run_check
+        from relecto.imaging.consistency import reconcile_with_images
+        d = draft_ct_chest(self.ct, [self.f])
+        first = d.index("du poumon gauche")
+        d = d[:first] + "du poumon droit" + d[first + len("du poumon gauche"):]   # error in Résultats only
+        text_issues = run_check(d, "ct_chest").issues
+        lat = [i for i in text_issues if i.rule_id == "LAT-001"]
+        self.assertTrue(lat and lat[0].suggestion.replacement.startswith("droit"))   # text alone copies the error
+        lat = [i for i in reconcile_with_images(text_issues, [], [self.f]) if i.rule_id == "LAT-001"]
+        self.assertIsNone(lat[0].suggestion)
+        self.assertEqual([i.rule_id for i in image_vs_report(d, [self.f])], ["IMG-002"])
+
+    def test_other_size_on_other_side_is_not_called_wrong_side(self):
+        d = ("RÉSULTATS :\nNodule pulmonaire du lobe inférieur droit, mesurant 40 x 35 mm.\n"
+             "CONCLUSION :\nNodule pulmonaire droit de 40 mm.\n")
         self.assertEqual([i.rule_id for i in image_vs_report(d, [self.f])], ["IMG-001"])
+        self.assertNotIn("IMG-002", [i.rule_id for i in image_vs_report(d, [self.f])])
 
 
 @unittest.skipUnless(LIDC.is_dir(), "public test scans not downloaded (./tools/get-test-ct.sh)")

@@ -33,6 +33,13 @@ class NoduleFinding:
     readers: int = 1              # how many readers outlined it (reference data)
     confidence: Optional[float] = None
     contributors: List[str] = field(default_factory=list)
+    centroid_vox: Optional[List[float]] = None   # (slice, row, column) for the viewer
+    lobe: Optional[str] = None     # e.g. "lobe supérieur droit", from the lobe segmentation model
+
+    @property
+    def location_fr(self) -> str:
+        side = "droit" if self.side == "R" else "gauche"
+        return self.lobe if self.lobe else f"tiers {self.zone} du poumon {side}"
 
     def to_dict(self):
         return asdict(self)
@@ -110,11 +117,13 @@ def measure(mask: np.ndarray, ct: CTVolume, source: str, fid: str, body=None, lu
         long_axis_mm=round(long_, 1), short_axis_mm=round(short, 1), mean_diameter_mm=round((long_ + short) / 2, 1),
         volume_mm3=round(float(mask.sum()) * ct.voxel_volume_mm3, 1),
         centroid_lps=[round(float(v), 1) for v in cen], key_slice=key,
+        centroid_vox=[round(float(v), 1) for v in cen_vox],
         mean_hu=round(float(ct.hu[mask].mean()), 0), source=source,
     )
 
 
-def findings_from_reader_annotations(anns: List[Annotation], ct: CTVolume, merge_mm: float = 10.0) -> List[NoduleFinding]:
+def findings_from_reader_annotations(anns: List[Annotation], ct: CTVolume, merge_mm: float = 10.0,
+                                     with_masks: bool = False):
     """One finding per nodule: annotations whose centroids are close are the same nodule seen by several readers."""
     body, lungs = _body_and_lungs(ct)
     measured = [(a, measure(a.mask, ct, "reference_readers", "tmp", body, lungs)) for a in anns]
@@ -136,8 +145,30 @@ def findings_from_reader_annotations(anns: List[Annotation], ct: CTVolume, merge
         f = measure(consensus if consensus.any() else union, ct, "reference_readers", "", body, lungs)
         f.readers = len(cl)
         f.contributors = [a.source for a, _ in cl]
-        out.append(f)
-    out.sort(key=lambda f: -f.long_axis_mm)
-    for n, f in enumerate(out, 1):
+        out.append((f, consensus if consensus.any() else union))
+    out.sort(key=lambda fm: -fm[0].long_axis_mm)
+    for n, (f, _) in enumerate(out, 1):
         f.finding_id = f"N{n}"
+    return out if with_masks else [f for f, _ in out]
+
+
+def findings_from_mask(mask: np.ndarray, ct: CTVolume, source: str, min_mm: float = 3.0,
+                       max_findings: int = 30) -> List[NoduleFinding]:
+    """One finding per connected component of a model's nodule mask (tiny specks dropped)."""
+    from scipy import ndimage
+
+    lab, n = ndimage.label(mask, structure=np.ones((3, 3, 3)))
+    if n == 0:
+        return []
+    body, lungs = _body_and_lungs(ct)
+    out = []
+    for c in range(1, n + 1):
+        m = lab == c
+        f = measure(m, ct, source, "", body, lungs)
+        if f.long_axis_mm >= min_mm:
+            out.append((f, m))
+    out.sort(key=lambda fm: -fm[0].long_axis_mm)
+    out = out[:max_findings]
+    for k, (f, _) in enumerate(out, 1):
+        f.finding_id = f"N{k}"
     return out

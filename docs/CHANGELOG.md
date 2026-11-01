@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.5.0 — 1 Nov 2026 (platform)
+- Image AI: lung lobe segmentation and lung nodule detection (TotalSegmentator models, local),
+  lobe-level location in the draft, memory-limited tiling for CPUs with < 12 GB RAM.
+- Web platform: login and roles (admin, radiologist, secretary), worklist, DICOM `.zip` upload,
+  CT viewer (3 planes, windows, overlays), findings to confirm or reject, report editor with live
+  checks, signature (locks; placeholders and critical issues block), PDF report, quality
+  dashboard, user administration, centre settings, audit log.
+- DICOM receiver (C-STORE SCP) for scanners and PACS; folder import; non-CT studies go to manual reporting.
+- AI worker with a database job queue (restart-safe, several workers on PostgreSQL).
+- Docker Compose: PostgreSQL + app + worker + DICOM receiver; `start.command`; backup script.
+- `relecto evaluate-ai`: AI vs reference outlines (sensitivity, false positives, size error).
+- Security: scrypt passwords, signed HttpOnly SameSite cookies, login throttling, CSRF header,
+  security headers, safe zip extraction.
+- Fix: `python -m relecto` entry guarded (AI helper processes).
+- 56 tests.
+
 ## 0.4.0 — 1 Nov 2026 (Phase 1, step 1: chest CT pipeline)
 - `relecto analyze STUDY`: DICOM CT loading with geometry and QC (orientation, duplicates, spacing), HU rescale.
 - Reads DICOM SEG annotations, merges the 4 LIDC readers into consensus nodules.
