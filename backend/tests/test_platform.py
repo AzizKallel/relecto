@@ -213,6 +213,22 @@ class TestStudyFlow(unittest.TestCase):
         self.assertEqual(self.admin.patch(f"/api/users/{me['id']}", json={"role": "secretary"}).status_code, 400)
 
 
+class TestWorkerIsolation(unittest.TestCase):
+    def test_job_runs_in_child_process(self):
+        from relecto.studies import ingest_folder
+        from relecto.worker import loop
+        tmp = Path(tempfile.mkdtemp())
+        hu, _ = phantom(n_slices=30, size=64)
+        write_series(tmp, hu, accession="ISO1")
+        sid = ingest_folder(tmp)[0]
+        with mock.patch.dict("os.environ", {"RELECTO_DISABLE_AI": "1"}):
+            loop(once=True, isolate=True)
+        with session_scope() as s:
+            st = s.get(Study, sid)
+            self.assertEqual(st.status, "ready", [j.error for j in st.jobs])
+            self.assertEqual(st.jobs[-1].status, "done")
+
+
 class TestDicomIngest(unittest.TestCase):
     def test_non_ct_study_goes_to_manual_reporting(self):
         from relecto.studies import ingest_folder

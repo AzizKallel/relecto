@@ -86,7 +86,28 @@ def run_job(job_id, study_id, storage_path, exam, indication):
     return True
 
 
-def loop(poll_seconds: float = 2.0, once: bool = False):
+def _run_isolated(claimed) -> None:
+    """Run one analysis in a child process: memory is fully returned after each study, and a
+    study that exhausts the machine's memory fails on its own instead of killing the worker."""
+    import multiprocessing as mp
+    ctx = mp.get_context("spawn")
+    p = ctx.Process(target=run_job, args=claimed, daemon=False)
+    p.start()
+    p.join()
+    if p.exitcode != 0:
+        job_id, study_id = claimed[0], claimed[1]
+        reason = ("mémoire insuffisante pour ce scanner (augmenter la RAM ou RELECTO_AI_MAX_PATCH)"
+                  if p.exitcode in (-9, 137) else f"processus d'analyse arrêté (code {p.exitcode})")
+        with session_scope() as s:
+            j, st = s.get(Job, job_id), s.get(Study, study_id)
+            if j and j.status == "running":
+                j.status, j.finished_at, j.error = "failed", _now(), reason
+                st.status = "failed"
+                audit(s, "analysis.failed", "study", study_id, job_id=job_id, error=reason)
+        log.error("Job %s: %s", job_id, reason)
+
+
+def loop(poll_seconds: float = 2.0, once: bool = False, isolate: bool | None = None):
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     log.info("Worker %s started", WORKER_ID)
     with session_scope() as s:   # jobs left running by a crashed worker go back to the queue
@@ -96,7 +117,10 @@ def loop(poll_seconds: float = 2.0, once: bool = False):
         claimed = claim_job()
         if claimed:
             log.info("Analysing study %s", claimed[1])
-            run_job(*claimed)
+            if isolate if isolate is not None else os.environ.get("RELECTO_WORKER_ISOLATE", "1") == "1":
+                _run_isolated(claimed)
+            else:
+                run_job(*claimed)
         elif once:
             return
         else:

@@ -32,12 +32,42 @@ def match(ai_findings, ref_findings):
     return pairs, fps
 
 
-def evaluate_folders(folders, out=None) -> int:
+def _child(folder, q):
     from .pipeline import analyze_study
+    a = analyze_study(folder, source="ai")
+    a.ct.hu = a.ct.hu[:1]          # the volume is not needed by the parent
+    q.put(a)
 
+
+def _analyze_in_child(folder):
+    """One process per study so memory is returned between scans."""
+    import multiprocessing as mp
+    ctx = mp.get_context("spawn")
+    q = ctx.Queue()
+    p = ctx.Process(target=_child, args=(str(folder), q))
+    p.start()
+    import queue
+    while True:
+        try:
+            a = q.get(timeout=5)
+            break
+        except queue.Empty:
+            if not p.is_alive():
+                raise RuntimeError(f"{Path(folder).name}: analysis process stopped (code {p.exitcode}, "
+                                   "likely out of memory)")
+    p.join()
+    return a
+
+
+def evaluate_folders(folders, out=None) -> int:
     rows, per_study = [], []
     for folder in folders:
-        a = analyze_study(folder, source="ai")
+        try:
+            a = _analyze_in_child(folder)
+        except RuntimeError as exc:
+            print(f"ÉCHEC {exc}")
+            per_study.append({"study": Path(folder).name, "error": str(exc)})
+            continue
         pairs, fps = match(a.findings, a.reference)
         per_study.append({"study": Path(folder).name, "seconds": a.seconds, "timings": a.timings,
                           "ai": len(a.findings), "reference": len(a.reference), "false_positives": len(fps),
@@ -59,11 +89,13 @@ def evaluate_folders(folders, out=None) -> int:
     summary = {
         "studies": len(folders), "reference_nodules": len(rows),
         "sensitivity_all": sens(rows), "sensitivity_relevant": sens(relevant), "relevant_nodules": len(relevant),
-        "false_positives_per_scan": sum(s["false_positives"] for s in per_study) / max(1, len(per_study)),
+        "false_positives_per_scan": sum(s.get("false_positives", 0) for s in per_study if "error" not in s)
+        / max(1, sum(1 for s in per_study if "error" not in s)),
         "median_abs_size_error_mm": round(median(abs(e) for e in errs), 1) if errs else None,
         "median_size_bias_mm": round(median(errs), 1) if errs else None,
         "side_agreement": (sum(1 for r in rows if r["side_ok"]) / sum(1 for r in rows if r["found"])) if errs else None,
-        "median_seconds_per_scan": median(s["seconds"] for s in per_study) if per_study else None,
+        "median_seconds_per_scan": median(s["seconds"] for s in per_study if "seconds" in s) if per_study else None,
+        "failed_scans": [s["study"] for s in per_study if "error" in s],
     }
     print("\nRésumé")
     for k, v in summary.items():
